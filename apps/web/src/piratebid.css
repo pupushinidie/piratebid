@@ -1,0 +1,337 @@
+/*
+ * 海盗叫墩的牌桌（夜间版就是这份；白天版由 day-theme.ts 按 day-palette.ts 换色，手调的在 theme-day.css）。
+ * 尺寸由 layout.ts 按可视区域算好，经 CSS 变量传进来：--top-h --gap --seat-h --hand-bar-h --me-w --action-w --side-w。
+ * 像素图全部整数倍缩放、image-rendering: pixelated；字号都是 12 的倍数，关键信息 24px。
+ */
+
+.app-shell.pb-game { width: 100%; max-width: none; height: 100vh; min-height: 0; margin: 0; padding: 0; overflow: hidden; position: relative; }
+.pb-board { position: relative; display: flex; flex-direction: column; gap: var(--gap); height: 100vh; padding: 0 12px 8px; box-sizing: border-box; overflow: hidden; }
+.pb-board img, .pb-card, .pb-fx, .pb-scene, .pb-candles, .pb-chip { image-rendering: pixelated; }
+
+/* ---------- 背景：船长舱的木桌（3× 图 cover），夜间叠烛光 ---------- */
+.pb-scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: var(--bg-night) center / cover no-repeat, #2a160c; }
+.pb-scene::after { content: ""; position: absolute; inset: 0; background: rgba(14, 8, 5, 0.3); }
+.pb-candles {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, calc(100vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  transform: translate(-50%, -50%);
+  background: var(--candles-img) 0 0 / 400% 100% no-repeat;
+  animation: pb-candles 0.72s steps(4, jump-none) infinite;
+}
+@keyframes pb-candles { from { background-position-x: 0%; } to { background-position-x: 100%; } }
+
+/* ---------- 顶栏 ---------- */
+.app-shell .pb-topbar {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 var(--top-h);
+  height: var(--top-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -12px;
+  padding: 0 12px;
+  white-space: nowrap;
+  background: rgba(26, 17, 11, 0.9);
+}
+.pb-topbar .brand-name { font-size: 24px; }
+.pb-topbar .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.pb-round { display: flex; align-items: baseline; gap: 10px; color: var(--muted); font-size: 12px; }
+.pb-round b { color: var(--gold); font-size: 24px; font-weight: 400; }
+
+/* ---------- 主体 ---------- */
+.pb-main { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; gap: var(--gap); }
+.pb-table-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+
+/* ---------- 座位 ---------- */
+.pb-seats { display: grid; gap: var(--gap); justify-content: center; flex: 0 0 auto; }
+.pb-seat {
+  --seat: #c88a2c;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--seat-h);
+  min-width: 0;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  background: rgba(44, 29, 19, 0.9);
+  box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 #86613a, inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 #120b06;
+}
+.pb-seat.active { background: rgba(74, 48, 32, 0.95); box-shadow: 0 0 0 var(--px) var(--edge), 0 0 0 calc(var(--px) * 3) #ffe08a, inset var(--px) var(--px) 0 0 #c88a2c; }
+.pb-seat.ghost { background: rgba(20, 28, 48, 0.88); }
+.pb-avatar { position: relative; flex: 0 0 auto; display: block; background: rgba(14, 8, 5, 0.5); box-shadow: 0 0 0 var(--px) var(--seat); }
+.pb-avatar > img { display: block; }
+.pb-seat-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pb-seat-name { display: flex; align-items: center; gap: 4px; min-width: 0; color: var(--text); font-size: 12px; line-height: 16px; white-space: nowrap; overflow: hidden; }
+.pb-seat-name strong { overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
+.pb-seat-nums { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 24px; line-height: 32px; white-space: nowrap; }
+.pb-bidbox { display: inline-flex; align-items: center; gap: 2px; }
+.pb-bidbox small { color: var(--muted); font-size: 12px; margin: 0 2px; }
+.pb-bidbox.wait { color: var(--muted); font-size: 12px; animation: pb-blink 1.2s steps(2, jump-none) infinite; }
+.pb-bidbox.done { color: #ffe08a; font-size: 12px; }
+.pb-bidbox.hit { color: #5cc85a; }
+.pb-bidbox.bust { color: #ff6a5a; }
+.pb-score { display: inline-flex; align-items: center; gap: 2px; color: #ffe08a; }
+.pb-score small { color: var(--muted); font-size: 12px; }
+.pb-seat.compact { gap: 6px; padding: 6px 8px; align-items: flex-start; }
+.pb-seat.compact .pb-seat-body { gap: 0; }
+.pb-seat.compact .pb-seat-nums { flex-direction: column; align-items: flex-start; gap: 0; line-height: 28px; }
+.pb-seat.compact .pb-seat-name .pb-tag { padding: 0 2px; }
+.pb-seat-clock { position: absolute; right: 6px; top: 4px; color: #ffe08a; font-size: 24px; line-height: 1; }
+.pb-tag { flex: 0 0 auto; padding: 0 4px; font-style: normal; font-size: 12px; line-height: 16px; color: #fff4dc; background: #4a3020; }
+.pb-tag.bot { color: #d8e8ff; background: #2a62c0; }
+.pb-tag.auto { color: #d8e8ff; background: #1f6f78; }
+.pb-tag.you { color: #2a1c06; background: #f0c050; }
+.pb-tag.warn { color: #ffd8d0; background: #6e1020; }
+.pb-tag.first { color: #2a160c; background: #dcc08a; }
+.pb-ghost-pile { display: inline-flex; align-items: flex-end; gap: 4px; color: var(--muted); font-size: 24px; line-height: 1; }
+
+/* ---------- 出牌区 ---------- */
+.pb-center {
+  position: relative;
+  flex: 1;
+  min-height: var(--center-h);
+  display: flex;
+  flex-direction: column;
+  background: rgba(43, 23, 13, 0.42);
+  box-shadow: 0 0 0 var(--px) rgba(14, 8, 5, 0.6), inset 0 0 0 var(--px) rgba(200, 138, 44, 0.35);
+}
+.pb-center-top { flex: 0 0 40px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px; min-width: 0; }
+.pb-leadhint { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text); font-size: 12px; white-space: nowrap; overflow: hidden; }
+.pb-leadhint b { color: #ffe08a; font-size: 24px; font-weight: 400; }
+.pb-tracker { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.pb-track { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); font-size: 12px; }
+.pb-track img { filter: grayscale(1) opacity(0.35); }
+.pb-track small { font-size: 12px; }
+.pb-track.on { color: #ffe08a; }
+.pb-track.on img { filter: none; }
+.pb-center-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 20px; }
+
+.pb-trick { position: relative; }
+.pb-slot { position: absolute; top: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: var(--px) dashed rgba(255, 224, 138, 0.3); color: #ffe08a; font-size: 12px; }
+.pb-slot.now { border-color: #ffe08a; background: rgba(255, 224, 138, 0.08); animation: pb-blink 1s steps(2, jump-none) infinite; }
+.pb-slot em, .pb-owner { position: absolute; left: 0; right: 0; top: calc(100% + 4px); color: var(--text); font-size: 12px; font-style: normal; line-height: 16px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-played { position: absolute; top: 0; animation: pb-in-top 0.25s ease-out; transition: transform 0.45s ease-in; }
+.pb-played.mine { animation-name: pb-in-bottom; }
+.pb-played.collect .pb-owner { visibility: hidden; }
+.pb-played .pb-card { display: block; }
+.pb-played.lead .pb-owner { color: #ffe08a; }
+@keyframes pb-in-top { from { transform: translateY(-32px); } to { transform: none; } }
+@keyframes pb-in-bottom { from { transform: translateY(32px); } to { transform: none; } }
+.pb-glow { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.pb-mark { position: absolute; right: 3%; top: 2%; }
+.pb-card { display: inline-block; background-repeat: no-repeat; }
+.pb-card-anim { animation: pb-card-anim 1.2s steps(8) infinite; }
+@keyframes pb-card-anim { from { background-position-x: 0; } to { background-position-x: var(--pb-anim-w); } }
+.pb-bonus { position: absolute; right: -10px; top: -14px; z-index: 5; color: #ffe08a; font-size: 24px; line-height: 1; text-shadow: 2px 2px 0 #2a160c, -2px -2px 0 #2a160c, 2px -2px 0 #2a160c, -2px 2px 0 #2a160c; animation: pb-float 0.9s ease-out; }
+@keyframes pb-float { from { transform: translateY(24px); } to { transform: none; } }
+.pb-trick-banner {
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  z-index: 20;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 14px;
+  transform: translateX(-50%);
+  color: #2a160c;
+  background: #f3e2b8;
+  font-size: 24px;
+  line-height: 28px;
+  white-space: nowrap;
+  box-shadow: 0 0 0 var(--px) #2a160c, inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 #a87a44;
+  animation: pb-in-top 0.2s ease-out;
+}
+.pb-trick-banner small { font-size: 12px; color: #6e4024; }
+
+/* ---------- 特效（横排精灵图，末帧是空的，播完就消失） ---------- */
+.pb-fx { position: absolute; left: 50%; top: 50%; z-index: 6; transform: translate(-50%, -50%); pointer-events: none; background-repeat: no-repeat; }
+.pb-fx-trick { width: 192px; height: 192px; background-image: var(--fx-trick-img); background-size: 1000% 100%; animation: pb-fx 0.6s steps(10, jump-none) forwards; }
+.pb-fx-splash { width: 192px; height: 192px; background-image: var(--fx-splash-img); background-size: 1000% 100%; animation: pb-fx 0.6s steps(10, jump-none) forwards; }
+.pb-fx-coins { width: 128px; height: 128px; background-image: var(--fx-coins-img); background-size: 1200% 100%; animation: pb-fx 0.72s steps(12, jump-none) forwards; }
+.pb-fx-hit { left: 0; transform: translateY(-50%); width: 128px; height: 128px; background-image: var(--fx-hit-img); background-size: 1000% 100%; animation: pb-fx 0.7s steps(10, jump-none) forwards; }
+.pb-fx-miss { left: 0; transform: translateY(-50%); width: 128px; height: 128px; background-image: var(--fx-miss-img); background-size: 1000% 100%; animation: pb-fx 0.7s steps(10, jump-none) forwards; }
+@keyframes pb-fx { from { background-position-x: 0%; } to { background-position-x: 100%; } }
+.pb-phone .pb-fx-trick, .pb-phone .pb-fx-splash { width: 96px; height: 96px; }
+.pb-phone .pb-fx-coins, .pb-phone .pb-fx-hit, .pb-phone .pb-fx-miss { width: 64px; height: 64px; }
+
+@keyframes pb-blink { 50% { opacity: 0.55; } }
+
+/* ---------- 叫墩 ---------- */
+.pb-bidpanel { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.pb-bid-title { color: var(--text); font-size: 24px; line-height: 1.2; text-align: center; }
+.pb-bid-title b { color: #ffe08a; font-weight: 400; }
+.pb-bid-sub { color: var(--muted); font-size: 12px; }
+.pb-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: calc(var(--chip) * 6 + 40px); }
+.pb-board .pb-chip {
+  width: var(--chip);
+  height: var(--chip);
+  padding: 0;
+  border: 0;
+  color: #2a160c;
+  background: var(--chip-img) 0 0 / 100% 100% no-repeat;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.pb-board .pb-chip:hover:not(:disabled) { transform: translateY(-4px); }
+.pb-board .pb-chip.on { background-image: var(--chip-on-img); }
+.pb-board .pb-chip.hinted { outline: var(--px) solid #ffe08a; outline-offset: 2px; }
+.pb-board .pb-chip:disabled:not(.on) { filter: grayscale(0.7) brightness(0.75); cursor: default; }
+.pb-board .pb-unbid { font-size: 12px; }
+
+/* ---------- 手牌栏 ---------- */
+.pb-handbar { flex: 0 0 var(--hand-bar-h); height: var(--hand-bar-h); display: grid; grid-template-columns: var(--me-w) minmax(0, 1fr) var(--action-w); gap: var(--gap); align-items: stretch; }
+.pb-me { display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-width: 0; }
+.pb-me .pb-seat { height: auto; min-height: 88px; }
+.pb-watch { font-family: inherit; font-size: 12px; }
+.pb-hand-wrap { display: flex; align-items: flex-end; justify-content: center; min-width: 0; }
+.pb-hand { position: relative; }
+.pb-board .pb-hand-card { position: absolute; bottom: 0; padding: 0; margin: 0; border: 0; background: none; cursor: default; transition: transform 0.12s; }
+.pb-board .pb-hand-card .pb-card { display: block; }
+.pb-board .pb-hand-card.playable { cursor: pointer; }
+.pb-board .pb-hand-card.playable:hover { transform: translateY(-8px); }
+.pb-board .pb-hand-card.selected { transform: translateY(-16px); }
+.pb-board .pb-hand-card.selected .pb-card { box-shadow: 0 0 0 var(--px) #ffe08a, 0 0 0 calc(var(--px) * 2) #2a160c; }
+.pb-board .pb-hand-card.hinted .pb-card { outline: var(--px) dashed #ffe08a; outline-offset: 2px; }
+.pb-board .pb-hand-card.off { cursor: not-allowed; }
+.pb-board .pb-hand-card.off .pb-card { filter: brightness(0.45) saturate(0.5); }
+.pb-hand-empty { position: absolute; left: 50%; bottom: 40%; transform: translateX(-50%); color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+.pb-actions { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; padding: 8px 10px; box-sizing: border-box; background: rgba(44, 29, 19, 0.88); box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 #86613a; }
+.pb-status { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 24px; line-height: 1.2; }
+.pb-status b { color: #ffe08a; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 8em; }
+.pb-status.mine { color: #ffe08a; }
+.pb-clock { min-width: 1.5em; color: #2a160c; background: #ffe08a; text-align: center; font-size: 24px; line-height: 28px; }
+.pb-tip, .pb-flash, .pb-hint { margin: 0; font-size: 12px; line-height: 1.5; }
+.pb-tip { color: var(--muted); }
+.pb-flash { color: #ff8a7a; }
+.pb-hint { padding: 4px 8px; color: #2a160c; background: #f3e2b8; box-shadow: 0 0 0 var(--px) #a87a44; }
+.app-shell .pb-board .pb-big { min-height: 44px; padding: 4px 14px; font-size: 24px; line-height: 1; white-space: nowrap; }
+.app-shell .pb-board .primary-button.pb-big { width: auto; margin: 0; }
+.pb-tigress { display: flex; gap: 6px; }
+.pb-mid .pb-tigress { flex-direction: column; }
+.app-shell .pb-board .pb-tigress .primary-button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: auto; min-height: 48px; margin: 0; padding: 2px 6px; font-size: 24px; white-space: nowrap; }
+.app-shell .pb-board .pb-hint-button { align-self: flex-start; }
+
+/* ---------- 侧栏（记录 + 聊天） ---------- */
+.pb-side { flex: 0 0 var(--side-w); width: var(--side-w); min-height: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.pb-log-panel { flex: 0 0 38%; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px; background: rgba(44, 29, 19, 0.92); box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 #86613a; }
+.pb-log { flex: 1; min-height: 0; overflow-y: auto; margin: 4px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.pb-log li.round { color: #ffe08a; }
+.pb-log li.reveal { color: var(--text); }
+.pb-log li.win { color: #b7f0c0; }
+.pb-log li.score { color: #ffe08a; }
+.pb-log li.warn { color: #ff9a8a; }
+.pb-chat-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.app-shell .pb-chat-panel .room-chat.light { display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0; padding: 8px 10px; }
+.app-shell .pb-chat-panel .room-chat-heading { margin-bottom: 6px; }
+.app-shell .pb-chat-panel .room-chat-heading span { display: none; }
+.app-shell .pb-chat-panel .room-chat-list { flex: 1; height: auto; min-height: 48px; }
+.app-shell .pb-chat-panel .voice-bar { margin-bottom: 6px; }
+.app-shell .pb-chat-panel .room-chat-form { margin-top: 6px; }
+.pb-side.drawer { position: fixed; top: var(--top-h); right: 0; bottom: 0; z-index: 40; width: min(360px, 100vw); padding: 8px; box-sizing: border-box; background: #1a110b; box-shadow: 0 0 0 var(--px) var(--edge); transform: translateX(105%); visibility: hidden; transition: transform 0.2s, visibility 0.2s; }
+.pb-side.drawer.open { transform: none; visibility: visible; }
+.pb-drawer-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+/* ---------- 弹窗：一轮结算、终局、规则 ---------- */
+.app-shell .gm-modal-backdrop.pb-backdrop-light { background: repeating-conic-gradient(rgba(14, 8, 5, 0.6) 0 25%, rgba(14, 8, 5, 0.4) 0 50%) 0 0 / 4px 4px; z-index: 50; }
+.app-shell .gm-panel.pb-dialog { width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; padding: 16px 20px; box-sizing: border-box; }
+.pb-dialog h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; color: #ffe08a; font-size: 24px; font-weight: 400; }
+.pb-dialog h2 small { color: var(--muted); font-size: 12px; }
+.pb-table { width: 100%; border-collapse: collapse; color: var(--text); font-size: 24px; line-height: 1.2; }
+.pb-table th { padding: 2px 6px; color: var(--muted); font-size: 12px; font-weight: 400; text-align: center; white-space: nowrap; }
+.pb-table td { padding: 4px 6px; text-align: center; white-space: nowrap; border-top: var(--px) solid rgba(134, 97, 58, 0.35); }
+.pb-table tr.me td { background: rgba(240, 192, 80, 0.12); }
+.pb-table td.pos { color: #5cc85a; }
+.pb-table td.neg { color: #ff6a5a; }
+.pb-table td.pb-total { color: #ffe08a; }
+.pb-table s { color: var(--muted); }
+.pb-table td.pb-name-cell { text-align: left; }
+.pb-name-cell { display: flex; align-items: center; gap: 6px; }
+.pb-name-cell span { overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+.pb-dialog-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.pb-dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.pb-wait { color: var(--muted); font-size: 12px; }
+.pb-ranking { display: grid; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
+.pb-ranking li { display: flex; align-items: center; gap: 8px; padding: 2px 6px; color: var(--text); font-size: 24px; line-height: 1.2; }
+.pb-ranking li.win { background: rgba(240, 192, 80, 0.16); }
+.pb-ranking li.me strong { color: #ffe08a; }
+.pb-ranking strong { flex: 1; min-width: 0; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-ranking b { color: #ffe08a; font-weight: 400; }
+.pb-rank { width: 1.2em; color: var(--muted); }
+.pb-rank-avatar { box-shadow: 0 0 0 var(--px) #86613a; }
+.pb-history-wrap { max-height: 40vh; overflow: auto; }
+.pb-history { font-size: 12px; }
+.pb-history td, .pb-history th { padding: 2px 4px; }
+
+.app-shell .gm-panel.pb-rules { width: min(860px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; }
+.pb-rules-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pb-rules-head h2 { margin: 0; color: #ffe08a; font-size: 24px; font-weight: 400; }
+.pb-rules-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 24px; margin-top: 8px; color: var(--text); font-size: 12px; line-height: 1.7; }
+.pb-rules-body h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; color: #f0c050; font-size: 24px; font-weight: 400; }
+.pb-rules-body p, .pb-rules-body ol, .pb-rules-body ul { margin: 0; padding-left: 18px; }
+.pb-rules-body p { padding-left: 0; }
+.pb-rules-body b { color: #f0c050; font-weight: 400; }
+.pb-rules-cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 6px; }
+.pb-rules-cards figure { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 84px; margin: 0; }
+.pb-rules-cards figcaption { color: var(--muted); font-size: 12px; text-align: center; line-height: 1.3; }
+.pb-muted { color: var(--muted); font-size: 12px; }
+.pb-mini-avatar { display: inline-block; flex: 0 0 auto; width: 32px; height: 32px; box-shadow: 0 0 0 var(--px) var(--seat); }
+.pb-mini-avatar img { display: block; }
+
+/* ---------- 窄屏（1024 一类）：顶栏收紧 ---------- */
+.pb-mid .pb-round span { display: none; }
+
+/* ---------- 手机 ---------- */
+.pb-phone.pb-board { padding: 0 8px 6px; height: 100dvh; }
+.app-shell .pb-phone .pb-topbar { margin: 0 -8px; padding: 0 8px; gap: 8px; }
+.pb-phone .pb-topbar .brand-name { display: none; }
+.pb-phone .pb-topbar .topbar-right { gap: 6px; }
+.pb-phone .pb-topbar .connection-status { display: none; }
+.pb-phone .pb-seat.phone { height: 76px; padding: 4px 6px 4px 10px; gap: 6px; align-items: flex-start; box-shadow: 0 0 0 var(--px) var(--edge), inset 4px 0 0 0 var(--seat); }
+.pb-phone .pb-seat.phone.active { box-shadow: 0 0 0 var(--px) var(--edge), 0 0 0 calc(var(--px) * 2) #ffe08a, inset 4px 0 0 0 var(--seat); }
+.pb-phone .pb-seat.phone.me { padding-left: 6px; box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 #86613a; }
+.pb-phone .pb-seat.phone .pb-seat-body { gap: 0; }
+.pb-phone .pb-seat.phone .pb-seat-nums { flex-direction: column; align-items: flex-start; gap: 0; line-height: 24px; }
+.pb-phone .pb-seat-tags { position: absolute; right: 4px; bottom: 4px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.pb-phone .pb-seat.phone .pb-score small { display: none; }
+.pb-phone .pb-seat-tags .pb-tag { padding: 0 2px; }
+.pb-phone .pb-ghost-pile img { width: 23px; height: 34px; }
+.pb-phone .pb-center { flex: 0 0 auto; }
+.pb-phone .pb-center-top { flex-basis: 36px; padding: 0 6px; }
+.pb-phone .pb-center-body { padding: 4px 0 24px; }
+.pb-phone .pb-trick-banner { font-size: 12px; line-height: 20px; top: -30px; padding: 2px 8px; }
+.pb-phone .pb-bonus { font-size: 12px; top: -10px; right: -6px; }
+.pb-phone .pb-bid-title { font-size: 12px; }
+.pb-phone .pb-bid-title b { font-size: 24px; }
+.pb-phone .pb-chips { gap: 4px; max-width: 360px; }
+.pb-mebar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: var(--gap); align-items: stretch; flex: 0 0 auto; }
+.pb-mebar .pb-seat { height: auto; min-height: 76px; }
+.pb-actions.phone { padding: 4px 6px; gap: 4px; }
+.pb-actions.phone .pb-status { font-size: 12px; flex-wrap: wrap; }
+.pb-actions.phone .pb-status.mine { font-size: 24px; }
+.app-shell .pb-board .pb-actions.phone .pb-big { min-height: 40px; padding: 2px 8px; }
+.app-shell .pb-board .pb-actions.phone .pb-tigress .primary-button { font-size: 12px; min-height: 44px; }
+.pb-phone .pb-hand-wrap { flex: 0 0 auto; height: var(--hand-bar-h); }
+.pb-phone .pb-rules-body { grid-template-columns: 1fr; }
+@media (max-width: 699px) {
+  .app-shell .gm-panel.pb-dialog { padding: 12px; }
+  .pb-rules-body { grid-template-columns: 1fr; }
+  .pb-table { font-size: 12px; }
+  .pb-table td.pb-total, .pb-table td.pos, .pb-table td.neg { font-size: 24px; }
+  .pb-ranking li { font-size: 12px; }
+  .pb-ranking b { font-size: 24px; }
+  .pb-ranking .pb-winner { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-candles, .pb-card-anim, .pb-slot.now, .pb-bidbox.wait { animation: none; }
+  .pb-played, .pb-trick-banner, .pb-bonus { animation: none; transition: none; }
+}

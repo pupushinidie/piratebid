@@ -1,0 +1,191 @@
+/*
+ * 首页和等候房间（谁是牛头王的排版；颜色、像素边框沿用 app-pixel.css）。
+ * 桌面三种尺寸一屏放下：在线牌桌、聊天这类可能很长的东西在自己的格子里滚动。
+ */
+.app-shell.pb-page { width: 100%; max-width: none; margin: 0; height: 100vh; min-height: 0; padding: 0 16px 12px; box-sizing: border-box; }
+.app-shell .pb-pagebar { flex: 0 0 auto; height: 56px; gap: 12px; white-space: nowrap; }
+.app-shell .pb-pagebar .topbar-right { gap: 10px; }
+.app-shell .brand { gap: 8px; }
+.pb-brand-icon { image-rendering: pixelated; }
+.app-shell .brand-name { font-size: 24px; }
+.app-shell .entry-card-heading { margin-bottom: 8px; }
+.pb-lamp { vertical-align: middle; }
+
+/* ---------- 首页 ---------- */
+.pb-home {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 512px minmax(360px, 440px) minmax(280px, 1fr);
+  grid-template-areas: "hero entry rooms";
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  padding-top: 12px;
+}
+.pb-home-hero { grid-area: hero; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.pb-entry { grid-area: entry; align-self: center; }
+.pb-home-hero { align-self: center; }
+.pb-home-rooms { grid-area: rooms; min-height: 0; overflow-y: auto; }
+.pb-hero-art {
+  position: relative;
+  width: 512px;
+  height: 288px;
+  flex: 0 0 auto;
+  background: var(--hero-img) center / 512px 288px no-repeat, #2c1d13;
+  image-rendering: pixelated;
+  box-shadow: 0 0 0 var(--px) var(--edge), inset 0 0 0 var(--px) #86613a;
+}
+.app-shell .pb-hero-art h1 {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  margin: 0;
+  color: var(--gold);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: 4px 4px 0 var(--edge), -2px -2px 0 var(--edge), 2px -2px 0 var(--edge), -2px 2px 0 var(--edge);
+}
+.pb-lead { margin: 0; color: var(--text); font-size: 12px; line-height: 2; }
+.pb-lead b { color: var(--gold); font-weight: 400; }
+.pb-home-facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.pb-home-facts span { padding: 2px 8px; color: var(--muted); background: var(--panel-2); font-size: 12px; }
+.pb-kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+.pb-kinds figure { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0; }
+.pb-kinds figcaption { display: flex; align-items: center; gap: 2px; color: var(--text); font-size: 12px; }
+.pb-kinds img, .pb-kinds .pb-card { image-rendering: pixelated; }
+.pb-card { display: inline-block; background-repeat: no-repeat; }
+.app-shell .pb-entry { padding: 16px 20px; }
+.app-shell .pb-entry .entry-form { margin-top: 12px; }
+.app-shell .pb-entry .field-label-spaced { margin-top: 12px; }
+.app-shell .pb-entry h2 { margin: 0; }
+.pb-capacity { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.app-shell .pb-capacity .capacity-option { height: 40px; padding: 0; }
+.app-shell .pb-capacity .capacity-option strong { font-size: 24px; }
+.app-shell .pb-entry-submit { width: 100%; margin-top: 14px; font-size: 24px; }
+.app-shell .pb-home-rooms .online-rooms { margin: 0; padding: 0; border-top: 0; }
+.app-shell .pb-home-rooms .online-rooms-heading { margin-bottom: 10px; }
+.app-shell .pb-home-rooms .online-rooms-heading h2 { margin: 2px 0 0; }
+.app-shell .pb-home-rooms .online-rooms-grid { grid-template-columns: 1fr; gap: 10px; }
+
+/* 开房选项 */
+.pb-options { display: grid; gap: 8px; }
+.pb-option { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.pb-option-name { flex: 0 0 60px; color: var(--muted); font-size: 12px; }
+.pb-option-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.pb-stepper { display: flex; align-items: center; gap: 6px; }
+.app-shell .pb-stepper .quiet-button { width: 32px; height: 32px; padding: 0; font-size: 24px; line-height: 1; }
+.app-shell .pb-stepper .text-input { width: 64px; height: 32px; padding: 0 6px; font-size: 24px; text-align: center; -moz-appearance: textfield; }
+.pb-stepper input::-webkit-outer-spin-button, .pb-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* ---------- 等候房间 ---------- */
+.pb-room {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(400px, 640px) minmax(250px, 1fr);
+  gap: 16px;
+  min-height: 0;
+  padding-top: 12px;
+}
+.pb-room-info, .pb-room-side { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.app-shell .pb-room .room-panel { padding: 14px 16px; }
+.pb-code-panel { display: flex; flex-direction: column; gap: 4px; }
+.app-shell .pb-code-panel .room-code-display { margin-top: 4px; }
+.pb-room-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pb-options-panel { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
+.app-shell .pb-options-panel .room-settings { margin-top: 4px; }
+.pb-room-players { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.app-shell .pb-room-players .panel-topline { display: flex; align-items: center; justify-content: space-between; }
+.pb-seat-grid { display: grid; grid-template-columns: 1fr; gap: 6px; min-height: 0; overflow-y: auto; padding: 2px; }
+.pb-seat-grid.two { grid-template-columns: 1fr 1fr; }
+.pb-room-seat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  box-shadow: 0 0 0 var(--px) var(--edge), inset calc(var(--px) * 3) 0 0 0 var(--seat, #4a3020);
+}
+.pb-room-seat.open { background: transparent; box-shadow: 0 0 0 var(--px) #4a3020; }
+.pb-room-seat-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pb-room-seat-name strong { overflow: hidden; color: var(--text); font-size: 24px; line-height: 28px; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
+.pb-room-seat-name > span { display: flex; flex-wrap: wrap; gap: 4px; color: var(--muted); font-size: 12px; }
+.pb-room-seat .empty-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; }
+.pb-room-seat .kick-button, .pb-room-seat .add-bot-button { flex: 0 0 auto; margin-left: auto; }
+.pb-mini-avatar { display: inline-block; flex: 0 0 auto; width: 32px; height: 32px; box-shadow: 0 0 0 var(--px) var(--seat); }
+.pb-mini-avatar img { display: block; image-rendering: pixelated; }
+.pb-tag { padding: 0 4px; font-style: normal; font-size: 12px; line-height: 16px; color: #fff4dc; background: #4a3020; }
+.pb-tag.bot { color: #d8e8ff; background: #2a62c0; }
+.pb-tag.you { color: #2a1c06; background: #f0c050; }
+.pb-tag.warn { color: #ffd8d0; background: #6e1020; }
+.pb-start { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.app-shell .pb-start-button { width: 100%; margin-top: 0; min-height: 52px; font-size: 24px; }
+.pb-room-kinds { flex: 0 0 auto; }
+.pb-room-kinds .pb-kinds { margin-top: 8px; }
+.pb-room-chat { flex: 1; min-height: 0; display: flex; }
+.app-shell .pb-room-chat .room-chat.light { display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0; padding: 10px 12px; }
+.app-shell .pb-room-chat .room-chat-heading span { display: none; }
+.app-shell .pb-room-chat .room-chat-list { flex: 1; height: auto; min-height: 60px; }
+.app-shell .pb-room .feedback { margin: 0; }
+
+/* ---------- 大屏：首页大图放到 2× ---------- */
+@media (min-width: 1800px) and (min-height: 900px) {
+  .pb-home { grid-template-columns: 1024px minmax(360px, 440px) minmax(280px, 1fr); }
+  .pb-hero-art { width: 1024px; height: 576px; background-size: 1024px 576px; }
+  .app-shell .pb-hero-art h1 { font-size: 72px; left: 24px; bottom: 20px; }
+  .pb-lead { font-size: 24px; line-height: 1.6; }
+  .pb-room { grid-template-columns: minmax(320px, 420px) minmax(480px, 760px) minmax(300px, 1fr); }
+  .pb-room-seat { min-height: 56px; }
+}
+
+/* ---------- 中等宽度：首页两列，在线牌桌放到大图下面 ---------- */
+@media (max-width: 1279px) and (min-width: 700px) {
+  .pb-home { grid-template-columns: 512px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "hero entry" "rooms entry"; }
+  .pb-home-hero .pb-kinds { display: none; }
+  .pb-room { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr) minmax(220px, 260px); gap: 12px; }
+  .pb-room-kinds { display: none; }
+}
+@media (max-height: 760px) and (min-width: 700px) {
+  .pb-home-hero .pb-kinds { display: none; }
+}
+
+/* ---------- 手机：一列，第一屏是标题和进入牌桌 ---------- */
+@media (max-width: 699px) {
+  .app-shell.pb-page { height: auto; min-height: 100vh; padding: 0 10px 16px; }
+  .app-shell .pb-pagebar { height: 48px; }
+  .app-shell .pb-pagebar .center-link { display: none; }
+  .app-shell .pb-pagebar .connection-status { display: none; }
+  .app-shell .brand-name { font-size: 12px; }
+  .pb-home, .pb-room { display: flex; flex-direction: column; height: auto; gap: 12px; padding-top: 8px; }
+  .pb-hero-art { width: 100%; height: 120px; background-size: 512px 288px; background-position: center 70%; }
+  .app-shell .pb-hero-art h1 { font-size: 36px; left: 10px; bottom: 8px; }
+  .pb-home-hero { gap: 8px; }
+  .pb-home-hero .pb-kinds, .pb-home-facts { display: none; }
+  .pb-home-hero { display: contents; }
+  .pb-hero-art { order: 1; }
+  .pb-entry { order: 2; }
+  .pb-lead { order: 3; }
+  .app-shell .pb-entry .entry-card-heading { display: none; }
+  .app-shell .pb-entry { padding: 12px 14px; }
+  .app-shell .pb-entry .entry-form { margin-top: 8px; }
+  .pb-home-rooms { order: 3; overflow: visible; }
+  .pb-capacity { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .pb-room-info { display: contents; }
+  .pb-code-panel { order: 1; }
+  .pb-room-players { order: 2; }
+  .pb-options-panel { order: 3; overflow: visible; }
+  .pb-room-side { order: 4; }
+  .pb-seat-grid { overflow: visible; }
+  .pb-seat-grid.two { grid-template-columns: 1fr 1fr; }
+  .pb-room-seat { min-height: 44px; padding: 4px 6px; gap: 6px; }
+  .pb-room-seat .add-bot-button { padding: 2px 6px; }
+  .pb-room-chat { min-height: 300px; }
+  .pb-room-kinds .pb-kinds { gap: 4px; }
+}
+.pb-room-seat.open .pb-room-seat-name strong { color: var(--muted); font-size: 12px; line-height: 16px; }
+/* 中等宽度和手机：两列座位里名字放不下 24px，用 12px（不截断「咕噜一号」） */
+@media (max-width: 1279px) {
+  .pb-room-seat-name strong { font-size: 12px; line-height: 16px; }
+}
+.app-shell .pb-pagebar .gm-modal-backdrop { white-space: normal; }

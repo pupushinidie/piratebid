@@ -1,12 +1,27 @@
 /*
- * 白天版手调的部分。大部分白天样式由 day-theme.ts 从 app-pixel.css、cantstop.css 换色生成，
+ * 白天版手调的部分。大部分白天样式由 day-theme.ts 从 app-pixel.css、pb-pages.css、piratebid.css 换色生成，
  * 这里只放机械换色不合适的地方；选择器都以 :root[data-theme="day"] 开头。
  */
 :root[data-theme="day"] { color-scheme: light; }
-:root[data-theme="day"] .app-shell * { scrollbar-color: #aebad0 var(--bg); }
+:root[data-theme="day"] .app-shell * { scrollbar-color: #d9c4a0 var(--bg); }
 
-/* 雪山场景里叠着的提示条、横幅还是深底，字和描边用回夜间的颜色 */
-:root[data-theme="day"] .cs-stage { --text: #eef3fb; --muted: #93a3bd; --edge: #04060c; --shade: #080c17; }
-
-/* 登山队里还没占领的路线格：夜间的亮边在白底上看不见，换成灰蓝描边 */
-:root[data-theme="day"] .cs-slot { box-shadow: inset 0 0 0 var(--px) #aebad0; }
+/* 牌桌背景：白天那张图（阳光下的同一张桌子），蒙一层 10% 白，不点蜡烛 */
+:root[data-theme="day"] .pb-scene { background: var(--bg-day) center / cover no-repeat, #f3e2b8; }
+:root[data-theme="day"] .pb-scene::after { background: rgba(255, 255, 255, 0.1); }
+:root[data-theme="day"] .pb-candles { display: none; }
+/* 桌上的面板：白天是半透明奶油色，字是深棕 */
+:root[data-theme="day"] .pb-seat, :root[data-theme="day"] .pb-actions, :root[data-theme="day"] .pb-log-panel { background: rgba(251, 243, 228, 0.92); }
+:root[data-theme="day"] .pb-seat.active { background: rgba(255, 236, 188, 0.96); box-shadow: 0 0 0 var(--px) #5a3a22, 0 0 0 calc(var(--px) * 3) #c88a2c; }
+:root[data-theme="day"] .pb-center { background: rgba(255, 246, 224, 0.55); }
+:root[data-theme="day"] .app-shell .pb-topbar { background: rgba(255, 255, 255, 0.92); }
+/* 头像底：白天用浅木色 */
+:root[data-theme="day"] .pb-avatar { background: #f1e3c8; }
+/* 首页大图换白天那张 */
+:root[data-theme="day"] .pb-hero-art { background-image: var(--hero-day-img); box-shadow: 0 0 0 var(--px) #2a1a10, inset 0 0 0 var(--px) #b89a6a; }
+/* 不能出的牌：白天也压暗（白底上压暗看得清） */
+/* 弹窗背后的半透明格子：白天用浅一点的棕 */
+:root[data-theme="day"] .app-shell .gm-modal-backdrop { background: repeating-conic-gradient(rgba(42, 26, 16, 0.55) 0 25%, rgba(42, 26, 16, 0.35) 0 50%) 0 0 / 4px 4px; }
+:root[data-theme="day"] .app-shell .gm-modal-backdrop.pb-backdrop-light { background: repeating-conic-gradient(rgba(42, 26, 16, 0.35) 0 25%, rgba(42, 26, 16, 0.2) 0 50%) 0 0 / 4px 4px; }
+/* 出牌区空位的虚线：白天用深一点的金 */
+:root[data-theme="day"] .pb-slot { border-color: rgba(148, 101, 10, 0.4); }
+:root[data-theme="day"] .pb-slot.now { border-color: #94650a; }

@@ -110,6 +110,27 @@ tutorialGame()                                      // 教程剧本开局（规�
 
 `SCENE_NAMES`：`bid`、`bid-partial`、`play-lead`、`play-follow`（必须跟花色）、`play-tigress`（手里有双面海盗）、`play-others`（别人出牌中）、`trick-end`、`trick-bonus`（美人鱼抓鬼船长 +40、金币 14 +10）、`round-end`、`final`、`final-tie`、`ghost-bid`、`ghost-play`、`max8-bid`、`max8-play`、`max8-final`、`tutorial`。玩家 id 是 p1…pN，默认视角 p1。所有局面都是真引擎走出来的。「对手离线」「超时」是房间层面的状态，预览页里改 `members[].connected` / `turnRemainingMs` 造。
 
+## 界面
+
+- 牌桌 `apps/web/src/GameBoard.tsx`，尺寸由 `layout.ts` 按可视区域算（牌在大牌 1–2×、小牌 1/3× 里挑），样式 `piratebid.css`；首页和等候房间 `App.tsx` + `pb-pages.css`（排版照谁是牛头王）。
+- 出牌两段式：点一下抬起，再点一次（或「出这张」、回车）才出；Esc 取消；不能出的牌灰掉，点了提示「要跟海藻」。双面海盗选中后在右边选「当海盗 / 当白旗」。
+- 座位上一直显示「叫 N 赢 M」，叫中绿、叫爆红；叫墩时只显示「思考中 / 已叫」，最后一人叫完一起亮出。
+- 预览页 `apps/web/preview.html?s=<场景>`（开发服务上打开），34 个界面，参数见 `src/preview.tsx` 开头。
+- 白天版：`day-palette.ts`（换色表、keep）+ `theme-day.css`（白天背景、关烛光、半透明面板）。
+
+## 声音
+
+- 全站共用的 `gm-sound.tsx`（♪ 面板：音乐 / 音效 / 语音三路音量）。这款**还没有背景音乐**（后期全站统一加），App.tsx 传 `NO_BGM`，♪ 面板照样显示。
+- 动作音效 `game-sfx.ts`：发牌洗牌、叫墩（交 / 撤回）、一起亮出（捶桌三下）、出牌（鬼船长低音、海盗刀光、美人鱼水泡、白旗）、赢墩、奖励、美人鱼抓鬼船长水花、一轮叫中 / 叫爆、终局、超时、轮到你、最后 5 秒倒计时。自己的响、别人的减半。
+
+## 新手教程
+
+- 剧本 `packages/game/src/tutorial.ts`（规则书 §9.8：3 人第 4 轮，每人 4 张，发牌写死），单测 `packages/game/test/tutorial.test.ts`。
+- 教练层 `apps/web/src/tutorial/`（Coach、咕噜嘎、useTutorial、小贴士、本机记录从欲罢不能 / 谁是牛头王照搬）；本游戏自己的是 `TutorialMode.tsx`、`tutorialGame.ts`（提示、小贴士）、`tutorial-piratebid.css`。
+- 一墩打完的停顿在教程里当成 `SYSTEM` 走一步 `ADVANCE`。剧本走完接着把这局打完（第 5–10 轮）当练习局，可以点「提示」（键盘 H，咕噜嘎替你算一步并说理由）；「再练一局」从第 1 轮开新局。
+- 入口：首页和等候房间的邀请卡（学过只剩「再看一遍」），地址带 `?tutorial` 直接打开；等候房间里看教程时房主一开局自动回牌桌。
+- 走查脚本：`~/projects/qa-reports/tools/tut-piratebid.mjs <输出目录> <1440|1920|1024|390> <night|day>`（`SHORT=1` 只走剧本）。
+
 ## 目录
 
 | 路径 | 内容 |

@@ -21,7 +21,8 @@ export {
 } from "./engine.js";
 export type { NewPlayer, RedactOptions } from "./engine.js";
 export * from "./scenes.js";
-export { botCommand } from "./bot.js";
+export { BOT_PARAMS, botCommand, botDecision } from "./bot.js";
+export type { BotDecision, BotParams } from "./bot.js";
 export { createRng } from "./rng.js";
 export type { Rng } from "./rng.js";
 export { CAPACITY_OPTIONS, DEFAULT_ROOM_ACCESS, DEFAULT_ROOM_SETTINGS } from "./roomTypes.js";

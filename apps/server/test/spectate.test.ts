@@ -17,15 +17,18 @@ import {
 // ---------- 每款游戏不一样的地方 ----------
 /** 最小的房间人数（对局要坐满才开始测）。 */
 const CAPACITY: Capacity = 2;
-/** 这款游戏有没有藏起来的信息。 */
-const HIDDEN_INFO = false;
-/** 开局后先走几步（每步选轮到的人的第一个合法动作），让场上有藏起来的牌。 */
-const STEPS = 4;
-/** 只在服务端的字段（牌堆顺序、种子等），观战的人永远拿不到。 */
-const SERVER_ONLY = ["deck", "seed"];
-/** 这份状态里看得到几样藏起来的东西（手牌之类）。 */
-function secretsSeen(_game: GameState): number {
-  return 0;
+/** 这款游戏有没有藏起来的信息：手牌、亮出之前的叫墩。 */
+const HIDDEN_INFO = true;
+/** 开局后先走几步（每步选轮到的人的第一个合法动作）：房主先叫墩，叫墩还没亮。 */
+const STEPS = 1;
+/** 只在服务端的字段（幽灵的牌、没发的牌、种子等），观战的人永远拿不到。 */
+const SERVER_ONLY = ["ghostQueue", "undealt", "seed", "rngState", "log"];
+/** 这份状态里看得到几样藏起来的东西：列出的玩家的手牌张数 + 叫墩阶段看得到的叫墩数。 */
+function secretsSeen(game: GameState): number {
+  return game.players.reduce(
+    (total, player) => total + (game.hands[player.id]?.length ?? 0) + (game.phase === "bid" && player.bid !== null ? 1 : 0),
+    0,
+  );
 }
 // ----------------------------------------
 

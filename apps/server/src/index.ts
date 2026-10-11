@@ -5,14 +5,20 @@ import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Server } from "socket.io";
 import {
+  advanceGame,
   applyCommand,
   botCommand,
   CAPACITY_OPTIONS,
   createGame,
   DEFAULT_ROOM_ACCESS,
+  DEFAULT_ROOM_SETTINGS,
+  defaultBid,
+  pendingActors,
   redactGameForViewer,
-  timeoutTurn,
+  safestPlay,
+  stepKey,
   type Capacity,
+  type GameCommand,
   type ClientToServerEvents,
   type IceServerConfig,
   type CreateRoomPayload,
@@ -23,6 +29,7 @@ import {
   type PublicRoomSummary,
   type RoomAccess,
   type RoomChatMessage,
+  type RoomSettings,
   type ServerToClientEvents,
   type Spectator,
   type VoiceSignal,
@@ -41,6 +48,8 @@ interface RoomState {
   /** 拿房间码进来（或者本来坐着改成观战）的观战者：看得到房间码，也能坐下。从列表进来的只有公开房间才能坐下。 */
   invited: Set<string>;
   access: RoomAccess;
+  /** 开房选项（记牌辅助），房主在等待时可以改，下一局生效。 */
+  settings: RoomSettings;
   chat: RoomChatMessage[];
   game?: GameState;
   /** 下一位加入者的座位编号；座位 id 在对局里固定，断线重连只换连接 id。 */
@@ -51,7 +60,10 @@ interface RoomState {
   voice: Map<string, { muted: boolean }>;
   /** 整轮结束后的继续投票。 */
   rematch?: { deadline: number; accepted: Set<string>; timer: ReturnType<typeof setTimeout> };
-  /** 当前这一步的截止时间；到点自动处理（见 timeoutTurn）。轮到人机行动时没有截止时间。 */
+  /**
+   * 当前这一步的截止时间：叫墩（所有没叫的真人共用一个）、出牌、一墩打完的停顿、结算页。
+   * 到点：叫墩 / 出牌由人机代打并记一次超时；停顿和结算页自动推进。key 见 stepKey，只在换人或换步骤时变。
+   */
   turn?: { deadline: number; timer: ReturnType<typeof setTimeout>; key: string };
   /** 轮到人机（人机座位、托管、离线的人）时，它下一步的计时器；key 同 turn。 */
   botTimer?: { timer: ReturnType<typeof setTimeout>; key: string };
@@ -72,7 +84,10 @@ const MAX_SPECTATORS = 20;
 /** 每一步的计时（毫秒）；默认用规则里的 stepTimeoutSec，测试时可以用环境变量缩短。 */
 const TURN_MS_OVERRIDE = process.env.TURN_MS ? Number(process.env.TURN_MS) : undefined;
 /** 人机的名字，按顺序取第一个没人用的。 */
-const BOT_NAMES = ["咕噜一号", "咕噜二号", "咕噜三号"];
+const BOT_NAMES = ["咕噜一号", "咕噜二号", "咕噜三号", "咕噜四号", "咕噜五号", "咕噜六号", "咕噜七号"];
+/** 一墩打完停多久、结算页最多停多久；测试时可以用环境变量缩短。 */
+const TRICK_PAUSE_MS = process.env.TRICK_PAUSE_MS ? Number(process.env.TRICK_PAUSE_MS) : undefined;
+const ROUND_PAUSE_MS = process.env.ROUND_PAUSE_MS ? Number(process.env.ROUND_PAUSE_MS) : undefined;
 /** 人机每一步的停顿乘上这个倍数；测试时设成 0 让人机立刻行动。 */
 const BOT_DELAY_SCALE = Number(process.env.BOT_DELAY_SCALE ?? 1);
 /** 离线的人轮到时先等这么久再由人机代打（刷新页面、短暂断线的人来得及回来）。 */
@@ -169,6 +184,7 @@ function snapshot(room: RoomState, viewerId: string): LobbyRoomSnapshot {
     code: seated || room.invited.has(viewerId) ? room.code : "",
     spectators: room.spectators.map((spectator) => ({ ...spectator })),
     access: { ...room.access },
+    settings: { ...room.settings },
     capacity: room.capacity,
     status: room.status,
     members: room.members.map((member) => ({ ...member })),
@@ -180,9 +196,9 @@ function snapshot(room: RoomState, viewerId: string): LobbyRoomSnapshot {
   };
 }
 
-/** 观战的人看到的对局：欲罢不能没有藏起来的信息，和玩家看到的一样（牌堆顺序、种子等去掉）。 */
+/** 观战的人看到的对局：默认只看公开信息；房主开了「观战看手牌」时能看所有人的手牌。牌堆、幽灵的牌、种子始终看不到。 */
 function spectatorGame(room: RoomState): GameState {
-  return redactGameForViewer(room.game!, "");
+  return redactGameForViewer(room.game!, "", { seeAll: room.access.spectatorsSeeAll });
 }
 
 function isSpectator(room: RoomState, socketId: string): boolean {
@@ -238,8 +254,8 @@ function roomSummaries(): PublicRoomSummary[] {
             ...(member.bot ? { bot: true } : {}),
             ...(player ? {
               score: player.score,
-              isActive: game!.phase !== "finished" && game!.players[game!.currentPlayer]?.id === player.id,
-              isWinner: game!.finalResult?.winner === player.id,
+              isActive: pendingActors(game!).includes(player.id),
+              isWinner: game!.finalResult?.winners.includes(player.id) ?? false,
             } : {}),
           };
         }),
@@ -421,10 +437,29 @@ function setTurnDeadline(room: RoomState, deadline: number, key: string): void {
   room.turn = { deadline, timer, key };
 }
 
+/** 现在要行动、由人机代打的座位（人机、托管、离线的人）。 */
+function pendingRobots(room: RoomState, game: GameState): string[] {
+  return pendingActors(game).filter((playerId) => robotSeat(room, playerId));
+}
+
+/** 这一步真人的时限。 */
+function stepMs(game: GameState): number {
+  switch (game.phase) {
+    case "bid":
+      return TURN_MS_OVERRIDE ?? game.config.bidTimeoutSec * 1000;
+    case "play":
+      return TURN_MS_OVERRIDE ?? game.config.playTimeoutSec * 1000;
+    case "trickEnd":
+      return TRICK_PAUSE_MS ?? game.config.trickPauseMs;
+    default:
+      return ROUND_PAUSE_MS ?? game.config.roundPauseSec * 1000;
+  }
+}
+
 /**
  * 每次对局变化、有人掉线 / 回来、托管开关后重新安排：
- * - 真人：每一步（掷骰、选推进、决定再掷还是收手）各限时 stepTimeoutSec 秒；
- * - 人机（人机座位、托管、离线的人）：停顿一下（见 botDelay）再行动，没有倒计时。
+ * - 截止时间：叫墩（没叫的真人共用一个）、出牌、一墩打完的停顿、结算页；key 只在换人或换步骤时变，别人叫墩不会重置倒计时。
+ * - 人机（人机座位、托管、离线的人）：停顿一下（见 botDelay）再行动；叫墩时一次一个，结算页自动点「继续」。
  */
 function updateTurnTimer(room: RoomState): void {
   const game = room.game;
@@ -432,65 +467,98 @@ function updateTurnTimer(room: RoomState): void {
     clearGameTimers(room);
     return;
   }
-  const key = `${game.turn}:${game.step}`;
-  const playerId = game.players[game.currentPlayer]!.id;
-  if (robotSeat(room, playerId)) {
-    clearTurnTimer(room);
-    if (room.botTimer?.key === key) return;
+  const key = stepKey(game);
+  const robots = pendingRobots(room, game);
+  const botKey = `${key}#${robots.join(",")}`;
+  if (robots.length > 0) {
+    if (room.botTimer?.key !== botKey) {
+      clearBotTimer(room);
+      const timer = setTimeout(() => runBot(room, botKey), botDelay(room, game, robots[0]!));
+      timer.unref();
+      room.botTimer = { timer, key: botKey };
+    }
+  } else {
     clearBotTimer(room);
-    const timer = setTimeout(() => runBot(room, key), botDelay(room, game, playerId));
-    timer.unref();
-    room.botTimer = { timer, key };
+  }
+  // 出牌轮到人机时不给倒计时；叫墩只要还有真人没叫就有倒计时；停顿和结算页总有。
+  const humansPending = pendingActors(game).some((playerId) => !robotSeat(room, playerId));
+  const needsDeadline = game.phase === "trickEnd" || game.phase === "roundEnd" || humansPending;
+  if (!needsDeadline) {
+    clearTurnTimer(room);
     return;
   }
-  clearBotTimer(room);
   if (room.turn?.key === key) return;
-  setTurnDeadline(room, Date.now() + (TURN_MS_OVERRIDE ?? game.config.stepTimeoutSec * 1000), key);
+  setTurnDeadline(room, Date.now() + stepMs(game), key);
 }
 
-/** 人机每一步前停多久：让大家看清骰子、爬山和爆掉 / 登顶的横幅。 */
+/** 人机每一步前停多久：让大家看清出牌和亮叫墩。 */
 function botDelay(room: RoomState, game: GameState, playerId: string): number {
   const jitter = 400 * Math.random();
   let ms: number;
-  if (game.stage === "choose") {
-    // 刚掷完：骰子滚动 650 ms，再看一眼选项
-    ms = 1500 + jitter;
-  } else if (game.stage === "decide") {
-    ms = 800 + jitter;
-  } else {
-    // 新回合：上一回合有人爆掉或登顶的话，等横幅播完
-    const dramatic = game.events.some((event) => event.type === "Busted" || event.type === "ColumnClaimed");
-    ms = (dramatic ? 2600 : 1000) + jitter;
-    const member = room.members.find((candidate) => candidate.playerId === playerId);
-    if (member && !member.bot && !member.connected) ms = Math.max(ms, OFFLINE_GRACE_MS);
-  }
+  if (game.phase === "bid") ms = 1200 + 1200 * Math.random();
+  else if (game.phase === "roundEnd") ms = 1500;
+  else ms = (game.trick.length === 0 ? 1100 : 900) + jitter;
+  const member = room.members.find((candidate) => candidate.playerId === playerId);
+  if (member && !member.bot && !member.connected && game.phase !== "roundEnd") ms = Math.max(ms, OFFLINE_GRACE_MS);
   return ms * BOT_DELAY_SCALE;
 }
 
-function runBot(room: RoomState, key: string): void {
-  if (room.botTimer?.key === key) delete room.botTimer;
-  const game = room.game;
-  if (rooms.get(room.code) !== room || !game || game.phase === "finished" || `${game.turn}:${game.step}` !== key) return;
-  const playerId = game.players[game.currentPlayer]!.id;
-  if (!robotSeat(room, playerId)) return;
+/** 人机替 playerId 走一步：只看它自己能看到的视图；人机出错时用默认动作（最不容易赢的牌 / 平均叫墩）。 */
+function robotCommand(game: GameState, playerId: string): GameCommand {
   try {
     const command = botCommand(redactGameForViewer(game, playerId), playerId);
-    room.game = command ? applyCommand(game, playerId, command) : timeoutTurn(game);
+    if (command) return command;
   } catch (error) {
-    console.error("人机行动失败，按超时处理", error);
-    room.game = timeoutTurn(game);
+    console.error("人机出错，用默认动作", error);
   }
+  if (game.phase === "bid") return { type: "BID", n: defaultBid(game) };
+  if (game.phase === "play") return safestPlay(game, playerId);
+  return { type: "CONTINUE" };
+}
+
+function applyRobot(room: RoomState, playerId: string): void {
+  const game = room.game!;
+  const command = robotCommand(game, playerId);
+  try {
+    room.game = applyCommand(game, playerId, command);
+  } catch (error) {
+    console.error("人机行动不合法，用默认动作", error);
+    room.game = applyCommand(game, playerId, game.phase === "play" ? safestPlay(game, playerId) : game.phase === "bid" ? { type: "BID", n: defaultBid(game) } : { type: "CONTINUE" });
+  }
+}
+
+function runBot(room: RoomState, botKey: string): void {
+  if (room.botTimer?.key === botKey) delete room.botTimer;
+  const game = room.game;
+  if (rooms.get(room.code) !== room || !game || game.phase === "finished") return;
+  const robots = pendingRobots(room, game);
+  if (`${stepKey(game)}#${robots.join(",")}` !== botKey || robots.length === 0) return;
+  applyRobot(room, robots[0]!);
   afterGameChange(room);
   emitRoomUpdate(room);
 }
 
+/** 到点：停顿和结算页自动推进；叫墩 / 出牌没动的真人记一次超时（连续两次转托管），由人机代打。 */
 function expireTurn(room: RoomState): void {
   if (rooms.get(room.code) !== room || !room.game || room.game.phase === "finished") return;
-  const playerId = room.game.players[room.game.currentPlayer]!.id;
-  const count = (room.timeouts.get(playerId) ?? 0) + 1;
-  room.timeouts.set(playerId, count);
-  if (count >= AUTO_AFTER_TIMEOUTS) setAuto(room, playerId, true);
-  room.game = timeoutTurn(room.game);
+  const game = room.game;
+  delete room.turn;
+  if (game.phase === "trickEnd" || game.phase === "roundEnd") {
+    room.game = advanceGame(game);
+  } else {
+    const pending = pendingActors(game);
+    const timedOut = pending.filter((playerId) => !robotSeat(room, playerId));
+    for (const playerId of pending) {
+      if (room.game.phase !== game.phase || !pendingActors(room.game).includes(playerId)) continue;
+      if (timedOut.includes(playerId)) {
+        const count = (room.timeouts.get(playerId) ?? 0) + 1;
+        room.timeouts.set(playerId, count);
+        if (count >= AUTO_AFTER_TIMEOUTS) setAuto(room, playerId, true);
+      }
+      applyRobot(room, playerId);
+    }
+    room.game = { ...room.game, events: [{ type: "TimedOut", players: timedOut, phase: game.phase }, ...room.game.events] };
+  }
   afterGameChange(room);
   emitRoomUpdate(room);
 }
@@ -512,7 +580,7 @@ function newGame(room: RoomState, seed = randomInt(2 ** 32 - 1)): GameState {
   for (const member of room.members) setAuto(room, member.playerId, false);
   room.timeouts.clear();
   clearGameTimers(room);
-  return createGame(room.members.map((member) => ({ id: member.playerId, name: member.name })), seed);
+  return createGame(room.members.map((member) => ({ id: member.playerId, name: member.name })), seed, { tracker: room.settings.tracker });
 }
 
 /** 记录一局的种子、玩家和动作序列，同一种子重放这串动作就能复现整局。 */
@@ -639,7 +707,7 @@ io.on("connection", (socket) => {
       return;
     }
     if (!isCapacity(payload?.capacity)) {
-      ack({ ok: false, error: "房间人数必须是 2–4 人。" });
+      ack({ ok: false, error: "房间人数必须是 2–8 人。" });
       return;
     }
 
@@ -667,6 +735,7 @@ io.on("connection", (socket) => {
       spectators: [],
       invited: new Set(),
       access: { ...DEFAULT_ROOM_ACCESS },
+      settings: { tracker: payload.settings?.tracker === false ? false : DEFAULT_ROOM_SETTINGS.tracker },
       chat: [],
       voice: new Map(),
       timeouts: new Map(),
@@ -809,6 +878,26 @@ io.on("connection", (socket) => {
       room.spectators = [];
       room.invited.clear();
     }
+    ack({ ok: true, data: undefined });
+    emitRoomUpdate(room);
+  });
+
+  socket.on("room:settings", (settings, ack) => {
+    const room = findRoomForSocket(socket.id);
+    if (!room || room.ownerId !== socket.id) {
+      ack({ ok: false, error: "只有房主可以修改开房选项。" });
+      return;
+    }
+    if (room.status !== "waiting") {
+      ack({ ok: false, error: "对局中不能改，下一局开始前再改。" });
+      return;
+    }
+    const tracker = settings?.tracker;
+    if (tracker !== undefined && typeof tracker !== "boolean") {
+      ack({ ok: false, error: "设置内容不正确。" });
+      return;
+    }
+    if (tracker !== undefined) room.settings = { ...room.settings, tracker };
     ack({ ok: true, data: undefined });
     emitRoomUpdate(room);
   });
@@ -1155,10 +1244,23 @@ io.on("connection", (socket) => {
 
 /** 仅供测试：直接把某个房间的对局标记为结束并发起继续投票。 */
 export const testHooks = {
+  /** 服务端的完整对局（含所有人的手牌、幽灵的牌），只给测试比对隐藏信息用。 */
+  peek(code: string): GameState | undefined {
+    return rooms.get(code)?.game;
+  },
   finishGame(code: string): void {
     const room = rooms.get(code);
     if (!room?.game) throw new Error("no game");
-    room.game = { ...room.game, phase: "finished" as const };
+    const best = Math.max(...room.game.players.map((player) => player.score));
+    room.game = {
+      ...room.game,
+      phase: "finished" as const,
+      turn: null,
+      finalResult: {
+        winners: room.game.players.filter((player) => player.score === best).map((player) => player.id),
+        totals: Object.fromEntries(room.game.players.map((player) => [player.id, player.score])),
+      },
+    };
     clearGameTimers(room);
     startRematchVote(room);
     emitRoomUpdate(room);

@@ -140,7 +140,7 @@ export function pickLayout(vw: number, vh: number, players: number, ghost: boole
       if (!layout) continue;
       // 两排牌都大、又差不多大最好；一样时手牌大一点、用大牌图（细节多）
       const score = 2 * layout.handCard.h + 2 * layout.trickCard.h - Math.abs(layout.handCard.h - layout.trickCard.h) / 2
-        + (layout.handCard.h >= layout.trickCard.h ? 1 : 0) + (hand.set === "lg" ? 0.5 : 0) + (trick.set === "lg" ? 0.5 : 0);
+        + (layout.handCard.h >= layout.trickCard.h ? 1 : -400) + (hand.set === "lg" ? 0.5 : 0) + (trick.set === "lg" ? 0.5 : 0);
       if (!best || score > best.score) best = { layout, score };
     }
   }

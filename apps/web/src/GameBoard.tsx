@@ -81,7 +81,7 @@ function useCountdown(room: LobbyRoomSnapshot): number | null {
     return () => window.clearInterval(timer);
   }, []);
   if (anchor.ms === undefined) return null;
-  return Math.max(0, Math.ceil((anchor.ms - (now - anchor.at)) / 1000));
+  return Math.max(0, Math.ceil((anchor.ms - Math.max(0, now - anchor.at)) / 1000));
 }
 
 function useReducedMotion(): boolean {
@@ -450,7 +450,7 @@ function useRematchSeconds(remainingMs: number | undefined): number | null {
     return () => window.clearInterval(timer);
   }, []);
   if (anchor.ms === undefined) return null;
-  return Math.max(0, Math.ceil((anchor.ms - (now - anchor.at)) / 1000));
+  return Math.max(0, Math.ceil((anchor.ms - Math.max(0, now - anchor.at)) / 1000));
 }
 
 function FinalDialog({ game, room, selfId, memberId, spectating, phone, onRematch, onLeave, actions }: {

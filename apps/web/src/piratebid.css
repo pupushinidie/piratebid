@@ -304,7 +304,7 @@
 .pb-phone .pb-seat.phone .pb-score small { display: none; }
 .pb-phone .pb-seat-tags .pb-tag { padding: 0 2px; }
 .pb-phone .pb-ghost-pile img { width: 23px; height: 34px; }
-.pb-phone .pb-center { flex: 0 0 auto; }
+.pb-phone .pb-center { flex: 1 0 auto; }
 .pb-phone .pb-center-top { flex-basis: 36px; padding: 0 6px; }
 .pb-phone .pb-center-body { padding: 4px 0 24px; }
 .pb-phone .pb-trick-banner { font-size: 12px; line-height: 20px; top: -30px; padding: 2px 8px; }

@@ -1,0 +1,523 @@
+{
+ "parchment": {
+  "file": "out/r1/parch-s213.png",
+  "why": "焦边羊皮纸，牌面最有旧航海图味；s211/s212 边上有灰蓝像素",
+  "candidates": [
+   "out/r1/parch-s211.png",
+   "out/r1/parch-s212.png",
+   "out/r1/parch-s213.png"
+  ]
+ },
+ "emb-seaweed": {
+  "file": "out/r1/emb-seaweed-s301.png",
+  "why": "颜色最正的翠绿、竖长轮廓",
+  "candidates": [
+   "out/r1/emb-seaweed-s301.png",
+   "out/r1/emb-seaweed-s302.png",
+   "out/r1/emb-seaweed-s303.png"
+  ]
+ },
+ "emb-coin": {
+  "file": "out/r1/emb-coin-s302.png",
+  "why": "锚纹金币，立体感最好",
+  "candidates": [
+   "out/r1/emb-coin-s301.png",
+   "out/r1/emb-coin-s302.png",
+   "out/r1/emb-coin-s303.png"
+  ]
+ },
+ "emb-compass": {
+  "file": "out/r1/emb-compass-s303.png",
+  "why": "紫色最多，和金币一眼分开",
+  "candidates": [
+   "out/r1/emb-compass-s301.png",
+   "out/r1/emb-compass-s302.png",
+   "out/r1/emb-compass-s303.png"
+  ]
+ },
+ "emb-flag": {
+  "file": "out/r1/emb-flag-s302.png",
+  "why": "骷髅交叉骨最大最清楚",
+  "candidates": [
+   "out/r1/emb-flag-s301.png",
+   "out/r1/emb-flag-s302.png",
+   "out/r1/emb-flag-s303.png"
+  ]
+ },
+ "suit-seaweed-24": {
+  "file": "out/r1/suit-seaweed-24/suit-seaweed-24-27.png",
+  "why": "64 个里轮廓最清楚、深浅底都看得清",
+  "candidates": [
+   "out/r1/suit-seaweed-24/suit-seaweed-24-27.png",
+   "out/r1/suit-seaweed-24/suit-seaweed-24-41.png",
+   "out/r1/suit-seaweed-24/suit-seaweed-24-9.png"
+  ]
+ },
+ "suit-coin-24": {
+  "file": "out/r1/suit-coin-24/suit-coin-24-49.png",
+  "why": "64 个里轮廓最清楚、深浅底都看得清",
+  "candidates": [
+   "out/r1/suit-coin-24/suit-coin-24-49.png",
+   "out/r1/suit-coin-24/suit-coin-24-42.png",
+   "out/r1/suit-coin-24/suit-coin-24-16.png"
+  ]
+ },
+ "suit-compass-24": {
+  "file": "out/r1/suit-compass-24/suit-compass-24-9.png",
+  "why": "64 个里轮廓最清楚、深浅底都看得清",
+  "candidates": [
+   "out/r1/suit-compass-24/suit-compass-24-9.png",
+   "out/r1/suit-compass-24/suit-compass-24-41.png",
+   "out/r1/suit-compass-24/suit-compass-24-42.png"
+  ]
+ },
+ "suit-flag-24": {
+  "file": "out/r1/suit-flag-24/suit-flag-24-52.png",
+  "why": "64 个里轮廓最清楚、深浅底都看得清",
+  "candidates": [
+   "out/r1/suit-flag-24/suit-flag-24-52.png",
+   "out/r1/suit-flag-24/suit-flag-24-54.png",
+   "out/r1/suit-flag-24/suit-flag-24-10.png"
+  ]
+ },
+ "suit-seaweed-16": {
+  "file": "out/r1/suit-seaweed-16/suit-seaweed-16-12.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/suit-seaweed-16/suit-seaweed-16-12.png",
+   "out/r1/suit-seaweed-16/suit-seaweed-16-11.png",
+   "out/r1/suit-seaweed-16/suit-seaweed-16-28.png"
+  ]
+ },
+ "suit-coin-16": {
+  "file": "out/r1/suit-coin-16/suit-coin-16-26.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/suit-coin-16/suit-coin-16-26.png",
+   "out/r1/suit-coin-16/suit-coin-16-25.png",
+   "out/r1/suit-coin-16/suit-coin-16-12.png"
+  ]
+ },
+ "suit-compass-16": {
+  "file": "out/r1/suit-compass-16/suit-compass-16-10.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/suit-compass-16/suit-compass-16-10.png",
+   "out/r1/suit-compass-16/suit-compass-16-8.png",
+   "out/r1/suit-compass-16/suit-compass-16-24.png"
+  ]
+ },
+ "suit-flag-16": {
+  "file": "out/r1/suit-flag-16/suit-flag-16-10.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/suit-flag-16/suit-flag-16-10.png",
+   "out/r1/suit-flag-16/suit-flag-16-28.png",
+   "out/r1/suit-flag-16/suit-flag-16-12.png"
+  ]
+ },
+ "sp-pirate-24": {
+  "file": "out/r1/sp-pirate-24/sp-pirate-24-11.png",
+  "why": "轮廓最清楚",
+  "candidates": [
+   "out/r1/sp-pirate-24/sp-pirate-24-11.png",
+   "out/r1/sp-pirate-24/sp-pirate-24-12.png",
+   "out/r1/sp-pirate-24/sp-pirate-24-27.png"
+  ]
+ },
+ "sp-ghost-24": {
+  "file": "out/r1/sp-ghost-24/sp-ghost-24-25.png",
+  "why": "轮廓最清楚",
+  "candidates": [
+   "out/r1/sp-ghost-24/sp-ghost-24-25.png",
+   "out/r1/sp-ghost-24/sp-ghost-24-9.png",
+   "out/r1/sp-ghost-24/sp-ghost-24-1.png"
+  ]
+ },
+ "sp-mermaid-24": {
+  "file": "out/r1/sp-mermaid-24/sp-mermaid-24-11.png",
+  "why": "轮廓最清楚",
+  "candidates": [
+   "out/r1/sp-mermaid-24/sp-mermaid-24-11.png",
+   "out/r1/sp-mermaid-24/sp-mermaid-24-19.png",
+   "out/r1/sp-mermaid-24/sp-mermaid-24-34.png"
+  ]
+ },
+ "sp-escape-24": {
+  "file": "out/r1/sp-escape-24/sp-escape-24-8.png",
+  "why": "轮廓最清楚",
+  "candidates": [
+   "out/r1/sp-escape-24/sp-escape-24-8.png",
+   "out/r1/sp-escape-24/sp-escape-24.png",
+   "out/r1/sp-escape-24/sp-escape-24-16.png"
+  ]
+ },
+ "sp-tigress-24": {
+  "file": "out/r1/sp-tigress-24/sp-tigress-24-29.png",
+  "why": "轮廓最清楚",
+  "candidates": [
+   "out/r1/sp-tigress-24/sp-tigress-24-29.png",
+   "out/r1/sp-tigress-24/sp-tigress-24-5.png",
+   "out/r1/sp-tigress-24/sp-tigress-24-45.png"
+  ]
+ },
+ "sp-pirate-16": {
+  "file": "out/r1/sp-pirate-16/sp-pirate-16-10.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/sp-pirate-16/sp-pirate-16-10.png",
+   "out/r1/sp-pirate-16/sp-pirate-16-1.png",
+   "out/r1/sp-pirate-16/sp-pirate-16-9.png"
+  ]
+ },
+ "sp-ghost-16": {
+  "file": "out/r1/sp-ghost-16/sp-ghost-16-9.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/sp-ghost-16/sp-ghost-16-9.png",
+   "out/r1/sp-ghost-16/sp-ghost-16-25.png",
+   "out/r1/sp-ghost-16/sp-ghost-16-41.png"
+  ]
+ },
+ "sp-mermaid-16": {
+  "file": "out/r1/sp-mermaid-16/sp-mermaid-16-11.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/sp-mermaid-16/sp-mermaid-16-11.png",
+   "out/r1/sp-mermaid-16/sp-mermaid-16-3.png",
+   "out/r1/sp-mermaid-16/sp-mermaid-16-27.png"
+  ]
+ },
+ "sp-tigress-16": {
+  "file": "out/r1/sp-tigress-16/sp-tigress-16-20.png",
+  "why": "16px 下最好认",
+  "candidates": [
+   "out/r1/sp-tigress-16/sp-tigress-16-20.png",
+   "out/r1/sp-tigress-16/sp-tigress-16-37.png",
+   "out/r1/sp-tigress-16/sp-tigress-16-29.png"
+  ]
+ },
+ "ic-hit": {
+  "file": "out/r1/ic-hit/ic-hit-8.png",
+  "why": "打开的宝箱冒金币，叫中的意思一眼明白",
+  "candidates": [
+   "out/r1/ic-hit/ic-hit-8.png",
+   "out/r1/ic-hit/ic-hit-10.png",
+   "out/r1/ic-hit/ic-hit-41.png"
+  ]
+ },
+ "ic-miss": {
+  "file": "out/r1/ic-miss/ic-miss-43.png",
+  "why": "火药桶炸开冒黑烟",
+  "candidates": [
+   "out/r1/ic-miss/ic-miss-43.png",
+   "out/r1/ic-miss/ic-miss-11.png",
+   "out/r1/ic-miss/ic-miss-26.png"
+  ]
+ },
+ "ic-bid": {
+  "file": "out/r1/ic-bid/ic-bid-8.png",
+  "why": "红蜡封卷轴=已交叫墩",
+  "candidates": [
+   "out/r1/ic-bid/ic-bid-8.png",
+   "out/r1/ic-bid/ic-bid-40.png",
+   "out/r1/ic-bid/ic-bid-9.png"
+  ]
+ },
+ "ic-trick": {
+  "file": "out/r1/ic-trick/ic-trick-11.png",
+  "why": "绳子捆住的一叠牌",
+  "candidates": [
+   "out/r1/ic-trick/ic-trick-11.png",
+   "out/r1/ic-trick/ic-trick-3.png",
+   "out/r1/ic-trick/ic-trick-19.png"
+  ]
+ },
+ "ic-score": {
+  "file": "out/r1/ic-score/ic-score-8.png",
+  "why": "金币堆",
+  "candidates": [
+   "out/r1/ic-score/ic-score-8.png",
+   "out/r1/ic-score/ic-score-4.png",
+   "out/r1/ic-score/ic-score-13.png"
+  ]
+ },
+ "back": {
+  "file": "out/r1/back-s201.png",
+  "why": "左右上下对称、罗盘徽章居中，深红皮革+金饰最贵气",
+  "candidates": [
+   "out/r1/back-s201.png",
+   "out/r1/back-s202.png",
+   "out/r1/back-s203.png"
+  ]
+ },
+ "bg-night": {
+  "file": "out/fix/bg-night.png",
+  "why": "桌子横贯全屏、中间空最大，烛光暖；卷轴上的伪字已抹掉改成代码画航线",
+  "candidates": [
+   "out/r1/bg-night-s401.png",
+   "out/r1/bg-night-s402.png",
+   "out/r1/bg-night-s403.png"
+  ]
+ },
+ "bg-day": {
+  "file": "out/fix/bg-day.png",
+  "why": "和夜间同构图（桌子铺满、物件靠边），阳光从舷窗斜照；地图伪字已抹",
+  "candidates": [
+   "out/r1/bg-day-s411.png",
+   "out/r1/bg-day-s412.png",
+   "out/r1/bg-day-s413.png"
+  ]
+ },
+ "winner": {
+  "file": "out/r1/winner-s603.png",
+  "why": "宝箱顶上有金冠，赢家的意思最明确",
+  "candidates": [
+   "out/r1/winner-s601.png",
+   "out/r1/winner-s602.png",
+   "out/r1/winner-s603.png"
+  ]
+ },
+ "candles": {
+  "lights": [
+   [
+    105,
+    72,
+    28
+   ],
+   [
+    155,
+    58,
+    18
+   ],
+   [
+    187,
+    44,
+    18
+   ],
+   [
+    107,
+    112,
+    18
+   ]
+  ],
+  "why": "夜间背景 s401 里油灯和三支蜡烛的位置"
+ },
+ "card-ghost": {
+  "file": "out/r1/c2-ghost-s1102.png",
+  "why": "唯一戴上小金冠的（鬼船长=王），独眼红光最有压迫感；第 1 轮的自带画框",
+  "candidates": [
+   "out/r1/c2-ghost-s1102.png",
+   "out/r1/c2-ghost-s1101.png",
+   "out/r1/card-ghost-s101.png",
+   "out/r1/card-ghost-s102.png",
+   "out/r1/card-ghost-s103.png"
+  ]
+ },
+ "card-mermaid-1": {
+  "file": "out/r1/c2-mermaid1-s1112.png",
+  "why": "棕发、粉贝壳、珊瑚尾，避开艾丽儿（s1111 是红棕发+紫贝壳，不用）",
+  "candidates": [
+   "out/r1/c2-mermaid1-s1112.png",
+   "out/r1/c2-mermaid1-s1111.png",
+   "out/r1/card-mermaid1-s111.png",
+   "out/r1/card-mermaid1-s112.png"
+  ]
+ },
+ "card-mermaid-2": {
+  "file": "out/r1/c2-mermaid2-s1121.png",
+  "why": "黑发蓝尾金贝壳，和 1 号一眼分开",
+  "candidates": [
+   "out/r1/c2-mermaid2-s1121.png",
+   "out/r1/card-mermaid2-s121.png",
+   "out/r1/card-mermaid2-s122.png"
+  ]
+ },
+ "card-tigress": {
+  "file": "out/r1/c2-tigress-s1132.png",
+  "why": "唯一一手举刀、一手拿白布的，正好是「当海盗或当白旗」",
+  "candidates": [
+   "out/r1/c2-tigress-s1132.png",
+   "out/r1/c2-tigress-s1131.png",
+   "out/r1/c2-tigress-s1133.png",
+   "out/r1/card-tigress-s131.png",
+   "out/r1/card-tigress-s132.png",
+   "out/r1/card-tigress-s133.png"
+  ]
+ },
+ "card-escape": {
+  "file": "out/r1/c2-escape-s1141.png",
+  "why": "白旗最大最清楚，海滩小船点出「撤退」",
+  "candidates": [
+   "out/r1/c2-escape-s1141.png",
+   "out/r1/c2-escape-s1142.png",
+   "out/r1/card-escape-s141.png",
+   "out/r1/card-escape-s142.png",
+   "out/r1/card-escape-s143.png"
+  ]
+ },
+ "card-pirate-1": {
+  "file": "out/r1/c2-pirate1-s1151.png",
+  "why": "独眼老海盗，脸最大最有神",
+  "candidates": [
+   "out/r1/c2-pirate1-s1151.png",
+   "out/r1/c2-pirate1-s1152.png",
+   "out/r1/card-pirate1-s151.png",
+   "out/r1/card-pirate1-s152.png"
+  ]
+ },
+ "card-pirate-2": {
+  "file": "out/r1/c2-pirate2-s1162.png",
+  "why": "拿望远镜的年轻女水手，脸更正",
+  "candidates": [
+   "out/r1/c2-pirate2-s1162.png",
+   "out/r1/c2-pirate2-s1161.png",
+   "out/r1/card-pirate2-s161.png",
+   "out/r1/card-pirate2-s162.png"
+  ]
+ },
+ "card-pirate-3": {
+  "file": "out/r1/c2-pirate3-s1171.png",
+  "why": "光头大胡子拿斧头，最凶",
+  "candidates": [
+   "out/r1/c2-pirate3-s1171.png",
+   "out/r1/c2-pirate3-s1172.png",
+   "out/r1/card-pirate3-s171.png",
+   "out/r1/card-pirate3-s172.png"
+  ]
+ },
+ "card-pirate-4": {
+  "file": "out/r1/c2-pirate4-s1182.png",
+  "why": "蓝帽白羽的大副，提灯，色调和别的海盗错开",
+  "candidates": [
+   "out/r1/c2-pirate4-s1182.png",
+   "out/r1/c2-pirate4-s1181.png",
+   "out/r1/card-pirate4-s181.png",
+   "out/r1/card-pirate4-s182.png"
+  ]
+ },
+ "card-pirate-5": {
+  "file": "out/r1/c2-pirate5-s1192.png",
+  "why": "斗笠女船长（南海），构图最完整",
+  "candidates": [
+   "out/r1/c2-pirate5-s1192.png",
+   "out/r1/c2-pirate5-s1191.png",
+   "out/r1/card-pirate5-s191.png",
+   "out/r1/card-pirate5-s192.png"
+  ]
+ },
+ "crew-1": {
+  "file": "out/r1/ava-cat-s501.png",
+  "why": "cat 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-cat-s501.png",
+   "out/r1/ava-cat-s502.png",
+   "out/r1/ava-cat-s503.png"
+  ]
+ },
+ "crew-2": {
+  "file": "out/r1/ava-parrot-s502.png",
+  "why": "parrot 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-parrot-s501.png",
+   "out/r1/ava-parrot-s502.png",
+   "out/r1/ava-parrot-s503.png"
+  ]
+ },
+ "crew-3": {
+  "file": "out/r1/ava-monkey-s501.png",
+  "why": "monkey 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-monkey-s501.png",
+   "out/r1/ava-monkey-s502.png",
+   "out/r1/ava-monkey-s503.png"
+  ]
+ },
+ "crew-4": {
+  "file": "out/r1/ava-dog-s503.png",
+  "why": "斗牛犬三个候选里唯一戴帽子+眼罩的，最有海盗味",
+  "candidates": [
+   "out/r1/ava-dog-s501.png",
+   "out/r1/ava-dog-s502.png",
+   "out/r1/ava-dog-s503.png"
+  ]
+ },
+ "crew-5": {
+  "file": "out/r1/ava-raccoon-s502.png",
+  "why": "raccoon 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-raccoon-s501.png",
+   "out/r1/ava-raccoon-s502.png",
+   "out/r1/ava-raccoon-s503.png"
+  ]
+ },
+ "crew-6": {
+  "file": "out/r1/ava-turtle-s502.png",
+  "why": "turtle 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-turtle-s501.png",
+   "out/r1/ava-turtle-s502.png",
+   "out/r1/ava-turtle-s503.png"
+  ]
+ },
+ "crew-7": {
+  "file": "out/r1/ava-crab-s502.png",
+  "why": "crab 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-crab-s501.png",
+   "out/r1/ava-crab-s502.png",
+   "out/r1/ava-crab-s503.png"
+  ]
+ },
+ "crew-8": {
+  "file": "out/r1/ava-seal-s502.png",
+  "why": "seal 三个候选里脸更大、更清楚",
+  "candidates": [
+   "out/r1/ava-seal-s501.png",
+   "out/r1/ava-seal-s502.png",
+   "out/r1/ava-seal-s503.png"
+  ]
+ },
+ "ava-ghost": {
+  "file": "out/r1/ava-ghost-s512.png",
+  "why": "戴水手帽的半透明蓝幽灵，最可爱也最好认",
+  "candidates": [
+   "out/r1/ava-ghost-s511.png",
+   "out/r1/ava-ghost-s512.png",
+   "out/r1/ava-ghost-s513.png"
+  ]
+ },
+ "sp-escape-16": {
+  "file": "out/r1/sp-escape-16/sp-escape-16.png",
+  "why": "和 24px 白旗同一种米白旗面+棕色旗杆",
+  "candidates": [
+   "out/r1/sp-escape-16/sp-escape-16.png",
+   "out/r1/sp-escape-16/sp-escape-16-8.png",
+   "out/r1/sp-escape-16/sp-escape-16-24.png"
+  ]
+ },
+ "anim-mermaid-1": {
+  "file": "out/anim/mermaid-1-s71/strip.png",
+  "why": "尾巴和水波轻摆、首帧就是静态牌面，循环接缝 7%（和相邻帧一样）；s72 表情眨眼大笑，略怪",
+  "candidates": [
+   "out/anim/mermaid-1-s71/preview.gif",
+   "out/anim/mermaid-1-s72/preview.gif"
+  ]
+ },
+ "anim-escape": {
+  "file": "out/anim/escape-s71/strip.png",
+  "why": "旗子飘得最明显，s72 动作小",
+  "candidates": [
+   "out/anim/escape-s71/preview.gif",
+   "out/anim/escape-s72/preview.gif"
+  ]
+ },
+ "anim-ghost": {
+  "file": "out/anim/ghost-s74/strip.png",
+  "why": "头微微一转、下巴张合、红眼闪，像在冷笑；第一次 s71 首帧和后面眼睛不一样会闪、s72 服务器报错，换动作词重做 3 个种子只成功这一个，坏帧检查通过",
+  "candidates": [
+   "out/anim/ghost-s74/preview.gif",
+   "out/anim/ghost-s71/preview.gif"
+  ]
+ }
+}

@@ -23,7 +23,10 @@ import {
   type GameState,
 } from "../src/index.js";
 
-const GAMES = 300;
+/** 默认每种人数 60 局（npm test 一分钟内跑完）；FULL_SIM=1 跑完整 300 局（交付标准的数字）。 */
+const GAMES = process.env.FULL_SIM === "1" ? 300 : 60;
+/** 每跑几局让出一次事件循环，免得 vitest 的 worker 心跳超时。 */
+const yieldLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
 const MAX_STEPS = 3000;
 
 function check(state: GameState, problems: string[]): void {
@@ -141,21 +144,22 @@ function runGame(count: number, seed: number, problems: string[]): { steps: numb
   return { steps, finished: state.phase === "finished", scores: state.players.map((player) => player.score) };
 }
 
-describe("随机对局（每种人数 300 局）", () => {
+describe(`随机对局（每种人数 ${GAMES} 局；FULL_SIM=1 跑 300 局）`, () => {
   for (let count = 2; count <= 8; count += 1) {
-    it(`${count} 人 ${GAMES} 局随机走到终局，不变量全部成立`, () => {
+    it(`${count} 人 ${GAMES} 局随机走到终局，不变量全部成立`, async () => {
       const problems: string[] = [];
       let unfinished = 0;
       let maxSteps = 0;
       for (let game = 0; game < GAMES; game += 1) {
         const result = runGame(count, count * 100_000 + game, problems);
+        if (game % 10 === 9) await yieldLoop();
         if (!result.finished) unfinished += 1;
         maxSteps = Math.max(maxSteps, result.steps);
       }
       expect(problems).toEqual([]);
       expect(unfinished).toBe(0);
       expect(maxSteps).toBeLessThan(MAX_STEPS);
-    }, 120_000);
+    }, 300_000);
   }
 });
 

@@ -11,7 +11,8 @@
 ```bash
 npm install
 npm run dev          # 服务端 3029 + 网页 http://localhost:5300
-npm test             # 规则包 + 服务端测试
+npm test             # 规则包 + 服务端测试（约 25 秒；随机对局和人机自对弈默认每种人数 60 / 40 局）
+FULL_SIM=1 npx vitest run packages/game/test/random.test.ts packages/game/test/bot.test.ts   # 完整 300 局（交付标准的数字，几分钟）
 npm run typecheck
 BASE_PATH=/piratebid/ npm run build
 ```
@@ -33,7 +34,7 @@ BASE_PATH=/piratebid/ npm run build
 |---|---|
 | `packages/game/test/rulebook.test.ts` | 规则书 §10 测试用例 TC1–TC13 逐条（测试名带「规则书#TCn」） |
 | `packages/game/test/sections.test.ts` | 规则书各章节的场景测试（§2 发牌、§3 开局、§4.1–4.5、§5 边界、§6 计分含例 1/例 2、§7 终局并列、§8.1 幽灵、§9.2 命令、§9.4 超时） |
-| `packages/game/test/random.test.ts` | 2–8 人每种 300 局随机对局：配件守恒、张数、赢墩合计、分数按公式重算、奖励作废、不卡死、跟花色独立复核、抽查视图不泄露 |
+| `packages/game/test/random.test.ts` | 2–8 人每种 300 局随机对局（`FULL_SIM=1`；默认 60 局）：配件守恒、张数、赢墩合计、分数按公式重算、奖励作废、不卡死、跟花色独立复核、抽查视图不泄露 |
 | `apps/server/test/room.test.ts` | 房间全流程（同时叫墩、出牌、停顿、结算页、10 轮、再来一局）、幽灵、观战两种视角、每一步超时、原昵称回座、开房选项、8 人房；每条更新都对照服务端完整状态抓包 |
 | `apps/server/test/spectate.test.ts`、`kickSession.test.ts`、`bots.test.ts` | 模板继承的观战、挤登录、人机托管测试（配置段改成本游戏） |
 

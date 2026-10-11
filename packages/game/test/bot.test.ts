@@ -53,17 +53,25 @@ function selfPlay(count: number, seed: number, stats: { ms: number[]; problems: 
   return state;
 }
 
-describe("人机自对弈（每种人数 300 局）", () => {
+/** 默认每种人数 40 局（npm test 一分钟内跑完）；FULL_SIM=1 跑完整 300 局（交付标准的数字）。 */
+const SELF_PLAY_GAMES = process.env.FULL_SIM === "1" ? 300 : 40;
+/** 每跑几局让出一次事件循环，免得 vitest 的 worker 心跳超时（onTaskUpdate timeout）。 */
+const yieldLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+describe(`人机自对弈（每种人数 ${SELF_PLAY_GAMES} 局；FULL_SIM=1 跑 300 局）`, () => {
   for (let count = 2; count <= 8; count += 1) {
-    it(`${count} 人：每一步合法、有理由、不死循环；每步平均 < 50ms、最坏 < 300ms`, () => {
+    it(`${count} 人：每一步合法、有理由、不死循环；每步平均 < 50ms、最坏 < 300ms`, async () => {
       const stats = { ms: [] as number[], problems: [] as string[] };
-      for (let game = 0; game < 300; game += 1) selfPlay(count, 70_000 + count * 1000 + game, stats);
+      for (let game = 0; game < SELF_PLAY_GAMES; game += 1) {
+        selfPlay(count, 70_000 + count * 1000 + game, stats);
+        if (game % 5 === 4) await yieldLoop();
+      }
       expect(stats.problems.slice(0, 5)).toEqual([]);
       const average = stats.ms.reduce((sum, ms) => sum + ms, 0) / stats.ms.length;
       const worst = stats.ms.reduce((max, ms) => Math.max(max, ms), 0);
       expect(average).toBeLessThan(50);
       expect(worst).toBeLessThan(300);
-    }, 180_000);
+    }, 300_000);
   }
 });
 

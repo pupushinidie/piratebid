@@ -1,0 +1,39 @@
+/* 海盗叫墩的教程样式（共用的 tutorial.css 之外）：侧栏的教程进度、「提示」按钮、顶栏的「新手教程」标记。 */
+
+/* 侧栏里替代聊天的教程进度：和「记录」同一种木牌底 */
+.app-shell .pb-chat-panel .tut-checklist {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.7;
+  background: rgba(44, 29, 19, 0.94);
+  box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 #86613a;
+}
+.app-shell .tut-checklist h3 { margin: 0 0 4px; color: #f0c050; font-size: 12px; font-weight: 400; }
+.app-shell .tut-checklist h3 small { margin-left: 8px; color: var(--muted); font-size: 12px; }
+.app-shell .tut-checklist ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; margin: 0; padding: 0; list-style: none; }
+.app-shell .tut-checklist li { white-space: nowrap; color: var(--muted); }
+.app-shell .tut-checklist li.now { color: #ffe08a; }
+.app-shell .tut-checklist li.done { color: #b7f0c0; }
+.app-shell .tut-checklist li i { display: inline-block; width: 14px; font-style: normal; }
+.app-shell .tut-checklist p { margin: 6px 0 0; }
+
+/* 「提示」按钮：打开时金色描边 */
+.app-shell .pb-board .pb-hint-button.on { color: var(--tut-gold-text, var(--gold)); box-shadow: 0 0 0 var(--px) var(--gold); }
+
+/* 顶栏的「新手教程 / 练习局」标记 */
+.pb-tut-tag { white-space: nowrap; }
+.pb-phone .pb-tut-tag { display: none; }
+
+/* 白天版：和「记录」一样换成奶油色木牌（教程样式不进 day-palette 的机械换色，这里手调） */
+:root[data-theme="day"] .app-shell .pb-chat-panel .tut-checklist {
+  background: rgba(251, 243, 228, 0.94);
+  box-shadow: 0 0 0 var(--px) var(--edge), inset var(--px) var(--px) 0 0 #ffffff;
+}
+:root[data-theme="day"] .app-shell .tut-checklist h3 { color: #94650a; }
+:root[data-theme="day"] .app-shell .tut-checklist li.now { color: #94650a; }
+:root[data-theme="day"] .app-shell .tut-checklist li.done { color: #1f8a45; }

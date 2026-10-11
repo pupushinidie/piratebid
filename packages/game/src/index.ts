@@ -21,6 +21,7 @@ export {
 } from "./engine.js";
 export type { NewPlayer, RedactOptions } from "./engine.js";
 export * from "./scenes.js";
+export * from "./tutorial.js";
 export { BOT_PARAMS, botCommand, botDecision } from "./bot.js";
 export type { BotDecision, BotParams } from "./bot.js";
 export { createRng } from "./rng.js";

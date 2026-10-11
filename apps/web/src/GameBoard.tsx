@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  botDecision,
   cardInfo,
   cardName,
   dealerOf,
@@ -29,6 +28,9 @@ import { playSelectSound, useGameSfx } from "./game-sfx.js";
 import { sfx, useSfxCountdown } from "./gm-sound.js";
 import { pickLayout, type Layout } from "./layout.js";
 import { socket } from "./socket.js";
+import { Coach, TipToast } from "./tutorial/Coach.js";
+import { useFirstTimeTips } from "./tutorial/tips.js";
+import { detectTips, GAME_ID, hintFor, TIPS, type Hint } from "./tutorial/tutorialGame.js";
 
 interface GameBoardProps {
   readonly room: LobbyRoomSnapshot;
@@ -414,7 +416,7 @@ function RoundEndDialog({ game, names, selfId, seconds, canContinue, busy, onCon
             {result.results.map((entry) => {
               const hit = entry.bid === entry.won;
               return (
-                <tr key={entry.player} className={entry.player === selfId ? "me" : ""}>
+                <tr key={entry.player} className={entry.player === selfId ? "me" : ""} data-tutorial={`result:${entry.player}`}>
                   <td className="pb-name-cell"><img src={hit ? ART.hit : ART.miss} alt={hit ? "叫中" : "没叫中"} width={icon} height={icon} /><span>{names[entry.player]}</span></td>
                   <td>{entry.bid}/{entry.won}</td>
                   {!phone && <td>{signed(entry.bidPoints)}</td>}
@@ -601,7 +603,7 @@ function GameBoard(props: GameBoardProps) {
   const myTurnToPlay = canAct && game.phase === "play";
   const legal = useMemo(() => (myTurnToPlay ? new Set(legalCards(myHand, game.trick)) : null), [myTurnToPlay, myHand, game.trick]);
   const [selected, setSelected] = useState<CardId | null>(null);
-  const [hint, setHint] = useState<{ text: string; card?: CardId; bid?: number; key: string } | null>(null);
+  const [hint, setHint] = useState<{ hint: Hint; key: string } | null>(null);
   const [drawer, setDrawer] = useState(false);
   const [flash, setFlash] = useState("");
   const flashTimer = useRef<number | undefined>(undefined);
@@ -651,12 +653,15 @@ function GameBoard(props: GameBoardProps) {
   }, []);
   const fxOf = (id: string) => seatFx?.fx[id] ?? null;
 
-  // ---- 一墩打完：停一下后把整墩牌滑向赢家 ----
+  // ---- 真实对局里第一次遇到某条规则（叫爆、叫 0 吃墩、要跟花色、美人鱼抓鬼船长、被托管……）时弹一句小贴士 ----
+  const tips = useFirstTimeTips(GAME_ID, game.version, () => detectTips(game, selfId, meMember?.auto === true), TIPS, mode === "online" && !spectating);
+
+  // ---- 一墩打完：停一下后把整墩牌滑向赢家（教程剧本里不滑，咕噜嘎要指着这墩讲） ----
   const boardRef = useRef<HTMLDivElement>(null);
   const centerRef = useRef<HTMLElement>(null);
   const [collect, setCollect] = useState<{ dx: number; dy: number; version: number } | null>(null);
   useLayoutEffect(() => {
-    if (game.phase !== "trickEnd" || reduced) return;
+    if (game.phase !== "trickEnd" || reduced || mode === "tutorial") return;
     const version = game.version;
     const winner = game.tricks[game.tricks.length - 1]!.winner;
     const timer = window.setTimeout(() => {
@@ -696,14 +701,13 @@ function GameBoard(props: GameBoardProps) {
     setSelected(card);
   }
   function askHint() {
-    const decision = botDecision(game, selfId);
-    if (!decision) return;
-    const command = decision.command;
-    if (command.type === "PLAY") {
-      setSelected(command.card);
-      setHint({ text: command.as ? `${decision.reason}（${command.as === "pirate" ? "当海盗" : "当白旗"}）` : decision.reason, card: command.card, key });
-    } else if (command.type === "BID") setHint({ text: decision.reason, bid: command.n, key });
-    else setHint({ text: decision.reason, key });
+    if (hint && hint.key === key) {
+      setHint(null);
+      return;
+    }
+    const next = hintFor(game, selfId);
+    if (next.card) setSelected(next.card);
+    setHint({ hint: next, key });
   }
 
   const onlyBots = room.members.every((member) => member.id === memberId || member.bot);
@@ -717,7 +721,7 @@ function GameBoard(props: GameBoardProps) {
         event.preventDefault();
         playCard(selected);
       }
-      if ((event.key === "h" || event.key === "H") && hintAllowed && canAct) askHint();
+      if ((event.key === "h" || event.key === "H") && !event.metaKey && !event.ctrlKey && hintAllowed && canAct) askHint();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -777,10 +781,9 @@ function GameBoard(props: GameBoardProps) {
       )}
       {myTurnToPlay && !phone && !hint && <p className="pb-tip">{!selected ? "点一张牌选中，再点一次出牌；灰掉的不能出" : selectedTigress ? "选当海盗还是当白旗" : "再点一次这张，或按上面的按钮；Esc 取消"}</p>}
       {(flash || props.error) && <p className="pb-flash" role="alert">{flash || props.error}</p>}
-      {hintAllowed && canAct && game.phase !== "roundEnd" && !hint && (
-        <button type="button" className="quiet-button pb-hint-button" onClick={askHint} data-tutorial="hint">提示</button>
+      {hintAllowed && canAct && game.phase !== "roundEnd" && (
+        <button type="button" className={hint ? "quiet-button pb-hint-button on" : "quiet-button pb-hint-button"} onClick={askHint} title="人机替你算一步（键盘 H）" data-tutorial="hint">提示</button>
       )}
-      {hint && <p className="pb-hint" data-tutorial="hint-text">{hint.text}</p>}
     </div>
   );
 
@@ -795,7 +798,7 @@ function GameBoard(props: GameBoardProps) {
           <button
             key={card}
             type="button"
-            className={`pb-hand-card${off ? " off" : ""}${selected === card ? " selected" : ""}${legal && !off ? " playable" : ""}${hint?.card === card ? " hinted" : ""}`}
+            className={`pb-hand-card${off ? " off" : ""}${selected === card ? " selected" : ""}${legal && !off ? " playable" : ""}${hint?.hint.card === card ? " hinted" : ""}`}
             style={{ left: index * layout.handStep, zIndex: index + 1 }}
             onClick={() => clickCard(card)}
             aria-disabled={!myTurnToPlay || off}
@@ -866,7 +869,7 @@ function GameBoard(props: GameBoardProps) {
       </div>
       <div className="pb-center-body">
         {game.phase === "bid" ? (
-          <BidPanel game={game} me={spectating ? undefined : me} layout={layout} canAct={canAct} busy={busy} hintBid={hint?.bid ?? null} onBid={(n) => { setHint(null); onCommand({ type: "BID", n }); }} onUnbid={() => onCommand({ type: "UNBID" })} />
+          <BidPanel game={game} me={spectating ? undefined : me} layout={layout} canAct={canAct} busy={busy} hintBid={hint?.hint.bid ?? null} onBid={(n) => { setHint(null); onCommand({ type: "BID", n }); }} onUnbid={() => onCommand({ type: "UNBID" })} />
         ) : (
           <TrickArea game={game} layout={layout} names={names} selfId={selfId} reduced={reduced} collect={collecting} />
         )}
@@ -919,6 +922,20 @@ function GameBoard(props: GameBoardProps) {
         </div>
         {side}
       </div>
+      {hint && (
+        <Coach
+          view={{
+            key: `hint-${key}`,
+            say: hint.hint.say,
+            ...(hint.hint.note ? { note: hint.hint.note } : {}),
+            anchor: hint.hint.anchor,
+            focus: false,
+            face: "think",
+            actions: <button className="quiet-button" type="button" onClick={() => setHint(null)}>知道了</button>,
+          }}
+        />
+      )}
+      {tips.tip && <TipToast tip={tips.tip} onClose={tips.dismiss} onNever={tips.never} />}
       {game.phase === "roundEnd" && (
         <RoundEndDialog game={game} names={names} selfId={selfId} seconds={seconds} canContinue={!spectating && !game.ready.includes(selfId)} busy={busy} onContinue={() => onCommand({ type: "CONTINUE" })} phone={phone} />
       )}

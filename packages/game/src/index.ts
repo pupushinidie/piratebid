@@ -1,22 +1,30 @@
 export * from "./types.js";
-export * from "./board.js";
+export * from "./cards.js";
 export {
-  advanceRunners,
+  advance,
+  advanceGame,
   apply,
   applyCommand,
-  bustProbability,
   createGame,
+  dealerOf,
+  defaultBid,
   defaultConfig,
+  handCountFor,
   legalActions,
-  moveOptions,
+  pendingActors,
+  playedThisRound,
+  playOrder,
   redactGameForViewer,
-  timeoutTurn,
+  safestPlay,
+  stepKey,
+  timeoutStep,
 } from "./engine.js";
-export type { NewPlayer } from "./engine.js";
+export type { NewPlayer, RedactOptions } from "./engine.js";
+export * from "./scenes.js";
 export { botCommand } from "./bot.js";
 export { createRng } from "./rng.js";
 export type { Rng } from "./rng.js";
-export { CAPACITY_OPTIONS, DEFAULT_ROOM_ACCESS } from "./roomTypes.js";
+export { CAPACITY_OPTIONS, DEFAULT_ROOM_ACCESS, DEFAULT_ROOM_SETTINGS } from "./roomTypes.js";
 export type {
   AckResponse,
   Capacity,
@@ -30,6 +38,7 @@ export type {
   RematchState,
   RoomAccess,
   RoomChatMessage,
+  RoomSettings,
   Spectator,
   SendRoomChatPayload,
   ServerToClientEvents,

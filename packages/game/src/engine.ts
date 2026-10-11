@@ -1,23 +1,44 @@
-import { COLUMNS, COLUMN_HEIGHTS, MAX_HEIGHT, PAIRINGS, isColumn, type Column } from "./board.js";
+import {
+  bidPoints,
+  bonusTotal,
+  cardInfo,
+  DECK,
+  effectiveKind,
+  handSize as handSizeFor,
+  isCard,
+  leadSuitOf,
+  legalCards,
+  rankOf,
+  suitOf,
+  TRUMP,
+  trickBonus,
+  trickWinner,
+} from "./cards.js";
 import { createRng, type Rng } from "./rng.js";
-import type {
-  Config,
-  GameCommand,
-  GameEvent,
-  GameState,
-  MoveOption,
-  Player,
-  Runner,
-  SavedProgress,
+import {
+  GHOST_ID,
+  type CardId,
+  type Config,
+  type GameCommand,
+  type GameEvent,
+  type GameState,
+  type PlayedCard,
+  type Player,
+  type RoundPlayerResult,
+  type TigressAs,
 } from "./types.js";
 
-export function defaultConfig(_playerCount: number, overrides: Partial<Config> = {}): Config {
+export function defaultConfig(playerCount: number, overrides: Partial<Config> = {}): Config {
   return {
     minPlayers: 2,
-    maxPlayers: 4,
-    columnsToWin: 3,
-    runners: 3,
-    stepTimeoutSec: 45,
+    maxPlayers: 8,
+    rounds: 10,
+    ghost: playerCount === 2,
+    tracker: true,
+    bidTimeoutSec: 30,
+    playTimeoutSec: 25,
+    trickPauseMs: 1800,
+    roundPauseSec: 15,
     ...overrides,
   };
 }
@@ -27,194 +48,221 @@ export interface NewPlayer {
   readonly name: string;
 }
 
-function currentPlayerId(state: GameState): string {
-  return state.players[state.currentPlayer]?.id ?? "";
+/** 发牌手数：玩家数，2 人局多一手幽灵。 */
+export function handCountFor(state: Pick<GameState, "config" | "players">): number {
+  return state.players.length + (state.config.ghost ? 1 : 0);
 }
 
-function currentPlayer(state: GameState): Player {
-  const player = state.players[state.currentPlayer];
-  if (!player) throw new Error("找不到当前玩家。");
+function playerById(state: GameState, id: string): Player {
+  const player = state.players.find((candidate) => candidate.id === id);
+  if (!player) throw new Error("你不在这局里。");
   return player;
 }
 
-/**
- * 在临时标记上按顺序推进 sums，返回推进后的标记；做不到（赛道已关闭、已在顶格、没有空闲的临时标记）返回 null。
- * 新上一条赛道时，从自己的营地（永久标记）上方一格开始；还没上过就从最底下一格开始。
- */
-export function advanceRunners(
-  state: Pick<GameState, "owners" | "config">,
-  player: Pick<Player, "progress">,
-  runners: readonly Runner[],
-  sums: readonly Column[],
-): Runner[] | null {
-  const next = runners.map((runner) => ({ ...runner }));
-  for (const column of sums) {
-    if (state.owners[column]) return null;
-    const runner = next.find((entry) => entry.column === column);
-    if (runner) {
-      if (runner.height >= COLUMN_HEIGHTS[column]) return null;
-      runner.height += 1;
-    } else {
-      if (next.length >= state.config.runners) return null;
-      next.push({ column, height: (player.progress[column] ?? 0) + 1 });
-    }
-  }
-  return next;
+function nextPlayerId(state: Pick<GameState, "players">, id: string): string {
+  const index = state.players.findIndex((player) => player.id === id);
+  return state.players[(index + 1) % state.players.length]!.id;
 }
 
 /**
- * 这把骰子所有合法的推进方式。每种配对得到两个和：两个都能走就必须都走；
- * 只能走其中一个（比如只剩 1 个临时标记、两条都是新赛道）就各算一种选择。
- * 不同配对得到同样的推进时合并成一项。没有任何选择就是爆掉。
+ * 一墩的出牌顺序（从 leader 开始）。
+ * 普通局：从领出的人顺时针一圈。
+ * 2 人局（幽灵）：真人领出 → 领出的人、幽灵、另一个人；幽灵领出 → 幽灵、本轮首位玩家、另一个人（规则书 §8.1）。
  */
-export function moveOptions(
-  state: Pick<GameState, "owners" | "config">,
-  player: Pick<Player, "progress">,
-  runners: readonly Runner[],
-  dice: readonly number[],
-): MoveOption[] {
-  const found = new Map<string, { sums: Column[]; pairings: number[] }>();
-  const add = (sums: Column[], pairing: number) => {
-    const key = sums.join("+");
-    const existing = found.get(key);
-    if (!existing) found.set(key, { sums, pairings: [pairing] });
-    else if (!existing.pairings.includes(pairing)) existing.pairings.push(pairing);
-  };
-  PAIRINGS.forEach(([[a, b], [c, d]], index) => {
-    const first = (dice[a]! + dice[b]!) as Column;
-    const second = (dice[c]! + dice[d]!) as Column;
-    const low = Math.min(first, second) as Column;
-    const high = Math.max(first, second) as Column;
-    if (advanceRunners(state, player, runners, [low, high])) {
-      add([low, high], index);
+export function playOrder(state: Pick<GameState, "config" | "players" | "firstPlayer">, leader: string): string[] {
+  const ids = state.players.map((player) => player.id);
+  if (!state.config.ghost) {
+    const start = ids.indexOf(leader);
+    return ids.map((_, offset) => ids[(start + offset) % ids.length]!);
+  }
+  const other = (id: string) => ids.find((candidate) => candidate !== id)!;
+  if (leader === GHOST_ID) return [GHOST_ID, state.firstPlayer, other(state.firstPlayer)];
+  return [leader, GHOST_ID, other(leader)];
+}
+
+/** 按牌组顺序排好（花色、点数，特殊牌在后）。 */
+function sortHand(hand: CardId[]): CardId[] {
+  return [...hand].sort((left, right) => DECK.indexOf(left) - DECK.indexOf(right));
+}
+
+/** 洗牌发第 state.round 轮：首位玩家已经定好。 */
+function deal(state: GameState, rng: Rng, events: GameEvent[]): void {
+  const hands = handCountFor(state);
+  const size = handSizeFor(state.round, hands);
+  const deck = rng.shuffle(DECK);
+  state.handSize = size;
+  state.hands = {};
+  state.handCounts = {};
+  state.players.forEach((player, index) => {
+    state.hands[player.id] = sortHand(deck.slice(index * size, (index + 1) * size));
+    state.handCounts[player.id] = size;
+    player.bid = null;
+    player.bidSubmitted = false;
+    player.won = 0;
+  });
+  const dealt = state.players.length * size;
+  if (state.config.ghost) {
+    state.ghostQueue = deck.slice(dealt, dealt + size);
+    state.handCounts[GHOST_ID] = size;
+    state.undealt = deck.slice(dealt + size);
+  } else {
+    state.ghostQueue = [];
+    state.undealt = deck.slice(dealt);
+  }
+  state.phase = "bid";
+  state.trickNo = 0;
+  state.leader = state.firstPlayer;
+  state.trick = [];
+  state.turn = null;
+  state.tricks = [];
+  state.ready = [];
+  events.push({ type: "RoundStarted", round: state.round, handSize: size, first: state.firstPlayer });
+}
+
+function playCard(state: GameState, by: string, card: CardId, as: TigressAs | undefined, events: GameEvent[]): void {
+  const play: PlayedCard = as ? { by, card, as } : { by, card };
+  state.trick.push(play);
+  state.handCounts[by] = (state.handCounts[by] ?? 1) - 1;
+  events.push(as ? { type: "CardPlayed", player: by, card, as } : { type: "CardPlayed", player: by, card });
+}
+
+/** 出完一张后：幽灵自动翻牌，整墩出完就判赢家进 trickEnd，否则轮到下一个真人。 */
+function settle(state: GameState, events: GameEvent[]): void {
+  const order = playOrder(state, state.leader);
+  while (state.trick.length < order.length) {
+    const next = order[state.trick.length]!;
+    if (next !== GHOST_ID) {
+      state.turn = next;
       return;
     }
-    if (advanceRunners(state, player, runners, [low])) add([low], index);
-    if (high !== low && advanceRunners(state, player, runners, [high])) add([high], index);
+    // 幽灵翻顶牌，不受跟花色限制；双面海盗一律当白旗。
+    const card = state.ghostQueue.shift()!;
+    playCard(state, GHOST_ID, card, cardInfo(card).kind === "tigress" ? "escape" : undefined, events);
+  }
+  const winnerIndex = trickWinner(state.trick);
+  const winning = state.trick[winnerIndex]!;
+  const bonus = trickBonus(state.trick, winnerIndex);
+  state.tricks.push({ leader: state.leader, plays: state.trick, winner: winning.by, winnerIndex, bonus });
+  if (winning.by !== GHOST_ID) playerById(state, winning.by).won += 1;
+  state.phase = "trickEnd";
+  state.turn = null;
+  events.push({ type: "TrickWon", winner: winning.by, card: winning.card, bonus, trick: state.trickNo });
+}
+
+function scoreRound(state: GameState, events: GameEvent[]): void {
+  const results: RoundPlayerResult[] = state.players.map((player) => {
+    const bid = player.bid ?? 0;
+    const bonusSum = state.tricks.filter((trick) => trick.winner === player.id).reduce((sum, trick) => sum + bonusTotal(trick.bonus), 0);
+    const hit = bid === player.won;
+    const base = bidPoints(bid, player.won, state.handSize);
+    const bonus = hit ? bonusSum : 0;
+    player.score += base + bonus;
+    return { player: player.id, bid, won: player.won, bidPoints: base, bonus, lostBonus: hit ? 0 : bonusSum, points: base + bonus, total: player.score };
   });
-  return [...found.values()];
+  state.history.push({ round: state.round, handSize: state.handSize, results });
+  events.push({ type: "RoundScored", round: state.round });
 }
 
-/** 当前玩家再掷一次爆掉的概率（枚举 6^4 种结果）。 */
-export function bustProbability(state: GameState): number {
-  const player = state.players[state.currentPlayer];
-  if (!player) return 0;
-  let busts = 0;
-  const dice = [1, 1, 1, 1];
-  for (let roll = 0; roll < 1296; roll += 1) {
-    dice[0] = (roll % 6) + 1;
-    dice[1] = (Math.floor(roll / 6) % 6) + 1;
-    dice[2] = (Math.floor(roll / 36) % 6) + 1;
-    dice[3] = Math.floor(roll / 216) + 1;
-    if (moveOptions(state, player, state.runners, dice).length === 0) busts += 1;
-  }
-  return busts / 1296;
-}
-
-function endTurn(state: GameState, events: GameEvent[]): void {
-  state.currentPlayer = (state.currentPlayer + 1) % state.players.length;
-  state.turn += 1;
-  state.step = 0;
-  state.stage = "roll";
-  state.runners = [];
-  state.options = [];
-  state.rollsThisTurn = 0;
-  events.push({ type: "TurnStarted", player: currentPlayerId(state) });
-}
-
-function finishGame(state: GameState, winner: Player, events: GameEvent[]): void {
+function finish(state: GameState, events: GameEvent[]): void {
+  const best = Math.max(...state.players.map((player) => player.score));
+  const winners = state.players.filter((player) => player.score === best).map((player) => player.id);
   state.phase = "finished";
-  state.stage = "roll";
-  state.runners = [];
-  state.options = [];
-  const claimed = Object.fromEntries(
-    state.players.map((player) => [player.id, COLUMNS.filter((column) => state.owners[column] === player.id)]),
-  );
-  state.finalResult = { winner: winner.id, claimed };
-  events.push({ type: "GameEnded", winner: winner.id });
+  state.turn = null;
+  state.finalResult = { winners, totals: Object.fromEntries(state.players.map((player) => [player.id, player.score])) };
+  events.push({ type: "GameEnded", winners });
 }
 
-function applyRoll(state: GameState, player: Player, rng: Rng, events: GameEvent[]): void {
-  if (state.stage === "choose") throw new Error("先选一种推进方式。");
-  const dice = Array.from({ length: 4 }, () => rng.int(6) + 1);
-  state.rollsThisTurn += 1;
-  events.push({ type: "Rolled", player: player.id, dice });
-  const options = moveOptions(state, player, state.runners, dice);
-  if (options.length === 0) {
-    events.push({ type: "Busted", player: player.id, dice, lost: state.runners.map((runner) => ({ ...runner })) });
-    state.lastRoll = { player: player.id, dice, bust: true };
-    endTurn(state, events);
-    return;
-  }
-  state.lastRoll = { player: player.id, dice, bust: false };
-  state.options = options;
-  state.stage = "choose";
-  state.step += 1;
+function startNextRound(state: GameState, rng: Rng, events: GameEvent[]): void {
+  state.round += 1;
+  state.firstPlayer = nextPlayerId(state, state.firstPlayer);
+  deal(state, rng, events);
 }
 
-function applyChoose(state: GameState, player: Player, sums: unknown, events: GameEvent[]): void {
-  if (state.stage !== "choose") throw new Error("现在不需要选择推进方式。");
-  if (!Array.isArray(sums) || !sums.every(isColumn)) throw new Error("推进方式不正确。");
-  const option = state.options.find((entry) =>
-    entry.sums.length === sums.length && entry.sums.every((column, index) => column === sums[index]),
-  );
-  if (!option) throw new Error("这把骰子不能这样走。");
-  state.runners = advanceRunners(state, player, state.runners, option.sums)!;
-  state.options = [];
-  if (state.lastRoll) state.lastRoll = { ...state.lastRoll, chosen: option.sums };
-  state.stage = "decide";
-  state.step += 1;
-  events.push({ type: "Advanced", player: player.id, sums: option.sums });
-}
-
-function applyStop(state: GameState, player: Player, events: GameEvent[]): void {
-  if (state.stage === "roll") throw new Error("这回合还没掷骰，不能收手。");
-  if (state.stage === "choose") throw new Error("先选一种推进方式。");
-  const saved: SavedProgress[] = state.runners.map((runner) => ({
-    column: runner.column,
-    from: player.progress[runner.column] ?? 0,
-    to: runner.height,
-  }));
-  for (const runner of state.runners) player.progress[runner.column] = runner.height;
-  events.push({ type: "Stopped", player: player.id, saved });
-
-  for (const runner of state.runners) {
-    if (runner.height < COLUMN_HEIGHTS[runner.column]) continue;
-    // 登顶：占领这条赛道，其他人在这条赛道上的营地全部撤下，赛道永久关闭。
-    state.owners[runner.column] = player.id;
-    const bumped: string[] = [];
-    for (const other of state.players) {
-      if (other.id === player.id || (other.progress[runner.column] ?? 0) === 0) continue;
-      other.progress[runner.column] = 0;
-      bumped.push(other.id);
+/** trickEnd → 下一墩 / 本轮计分；roundEnd → 发下一轮。原地修改。 */
+function advanceInPlace(state: GameState, rng: Rng, events: GameEvent[]): void {
+  if (state.phase === "trickEnd") {
+    const last = state.tricks[state.tricks.length - 1]!;
+    if (state.trickNo + 1 < state.handSize) {
+      state.trickNo += 1;
+      state.leader = last.winner;
+      state.trick = [];
+      state.phase = "play";
+      settle(state, events);
+      return;
     }
-    player.score += 1;
-    events.push({ type: "ColumnClaimed", player: player.id, column: runner.column, bumped });
-  }
-  state.runners = [];
-  if (player.score >= state.config.columnsToWin) {
-    finishGame(state, player, events);
+    scoreRound(state, events);
+    if (state.round >= state.config.rounds) finish(state, events);
+    else {
+      state.phase = "roundEnd";
+      state.ready = [];
+    }
     return;
   }
-  endTurn(state, events);
+  if (state.phase === "roundEnd") {
+    startNextRound(state, rng, events);
+    return;
+  }
+  throw new Error("现在不需要自动推进。");
+}
+
+function revealBids(state: GameState, events: GameEvent[]): void {
+  events.push({ type: "BidsRevealed", bids: Object.fromEntries(state.players.map((player) => [player.id, player.bid!])) });
+  state.phase = "play";
+  state.trickNo = 0;
+  state.leader = state.firstPlayer;
+  state.trick = [];
+  settle(state, events);
+}
+
+function applyBid(state: GameState, player: Player, n: unknown, events: GameEvent[]): void {
+  if (state.phase !== "bid") throw new Error("现在不是叫墩的时候。");
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > state.handSize) {
+    throw new Error(`叫墩要在 0 到 ${state.handSize} 之间。`);
+  }
+  player.bid = n;
+  player.bidSubmitted = true;
+  events.push({ type: "BidSubmitted", player: player.id });
+  if (state.players.every((candidate) => candidate.bidSubmitted)) revealBids(state, events);
+}
+
+function applyPlay(state: GameState, player: Player, card: unknown, as: unknown, events: GameEvent[]): void {
+  if (state.phase !== "play") throw new Error("现在不是出牌的时候。");
+  if (state.turn !== player.id) throw new Error("还没轮到你。");
+  if (!isCard(card)) throw new Error("没有这张牌。");
+  const hand = state.hands[player.id] ?? [];
+  if (!hand.includes(card)) throw new Error("你手里没有这张牌。");
+  const tigress = cardInfo(card).kind === "tigress";
+  if (tigress && as !== "pirate" && as !== "escape") throw new Error("双面海盗要选当海盗还是当白旗。");
+  if (!tigress && as !== undefined) throw new Error("只有双面海盗能选身份。");
+  if (!legalCards(hand, state.trick).includes(card)) throw new Error("要跟领出的花色。");
+  state.hands[player.id] = hand.filter((candidate) => candidate !== card);
+  playCard(state, player.id, card, tigress ? (as as TigressAs) : undefined, events);
+  settle(state, events);
 }
 
 export function apply(state: GameState, playerId: string, command: GameCommand, rng: Rng): { state: GameState; events: GameEvent[] } {
   if (state.phase === "finished") throw new Error("对局已经结束。");
-  if (currentPlayerId(state) !== playerId) throw new Error("还没轮到你。");
-
   const next = structuredClone(state);
-  const player = currentPlayer(next);
+  const player = playerById(next, playerId);
   const events: GameEvent[] = [];
   switch (command?.type) {
-    case "ROLL":
-      applyRoll(next, player, rng, events);
+    case "BID":
+      applyBid(next, player, command.n, events);
       break;
-    case "CHOOSE":
-      applyChoose(next, player, command.sums, events);
+    case "UNBID":
+      if (next.phase !== "bid") throw new Error("叫墩已经亮出，不能再改。");
+      if (!player.bidSubmitted) throw new Error("你还没有叫墩。");
+      player.bid = null;
+      player.bidSubmitted = false;
+      events.push({ type: "BidWithdrawn", player: player.id });
       break;
-    case "STOP":
-      applyStop(next, player, events);
+    case "PLAY":
+      applyPlay(next, player, command.card, command.as, events);
+      break;
+    case "CONTINUE":
+      if (next.phase !== "roundEnd") throw new Error("现在不需要继续。");
+      if (!next.ready.includes(player.id)) next.ready.push(player.id);
+      if (next.players.every((candidate) => next.ready.includes(candidate.id))) advanceInPlace(next, rng, events);
       break;
     default:
       throw new Error("未知的行动。");
@@ -224,66 +272,173 @@ export function apply(state: GameState, playerId: string, command: GameCommand, 
   return { state: next, events };
 }
 
-function runCommand(state: GameState, playerId: string, command: GameCommand): { state: GameState; events: GameEvent[] } {
-  const rng = createRng(state.rngState ?? state.seed ?? 0);
-  const { state: next, events } = apply(state, playerId, command, rng);
-  next.rngState = rng.state;
-  next.log = [...(state.log ?? []), { player: playerId, command }];
+/** 系统推进（服务器在 trickEnd 停顿后、roundEnd 到时调用）。 */
+export function advance(state: GameState, rng: Rng): { state: GameState; events: GameEvent[] } {
+  const next = structuredClone(state);
+  const events: GameEvent[] = [];
+  advanceInPlace(next, rng, events);
+  next.version += 1;
+  next.events = events;
   return { state: next, events };
 }
 
-export function applyCommand(state: GameState, playerId: string, command: GameCommand): GameState {
-  return runCommand(state, playerId, command).state;
+function withRng(
+  state: GameState,
+  entry: NonNullable<GameState["log"]>[number],
+  run: (rng: Rng) => { state: GameState; events: GameEvent[] },
+): GameState {
+  const rng = createRng(state.rngState ?? state.seed ?? 0);
+  const { state: next } = run(rng);
+  next.rngState = rng.state;
+  next.log = [...(state.log ?? []), entry];
+  return next;
 }
 
-export function legalActions(state: GameState, playerId: string): GameCommand[] {
-  if (state.phase === "finished" || currentPlayerId(state) !== playerId) return [];
-  switch (state.stage) {
-    case "roll":
-      return [{ type: "ROLL" }];
-    case "choose":
-      return state.options.map((option) => ({ type: "CHOOSE", sums: [...option.sums] }));
-    case "decide":
-      return [{ type: "ROLL" }, { type: "STOP" }];
+/** 服务端用：随机数状态从 state 里取、再存回去。 */
+export function applyCommand(state: GameState, playerId: string, command: GameCommand): GameState {
+  return withRng(state, { player: playerId, command }, (rng) => apply(state, playerId, command, rng));
+}
+
+export function advanceGame(state: GameState): GameState {
+  return withRng(state, { player: "", command: { type: "ADVANCE" } }, (rng) => advance(state, rng));
+}
+
+/** 现在要谁行动：叫墩时是还没叫的人；出牌时是轮到的人；结算页是还没点继续的人；trickEnd 没人（自动推进）。 */
+export function pendingActors(state: GameState): string[] {
+  switch (state.phase) {
+    case "bid":
+      return state.players.filter((player) => !player.bidSubmitted).map((player) => player.id);
+    case "play":
+      return state.turn ? [state.turn] : [];
+    case "roundEnd":
+      return state.players.filter((player) => !state.ready.includes(player.id)).map((player) => player.id);
+    default:
+      return [];
   }
 }
 
 /**
- * 当前这一步超时：
- * - 回合开始还没掷骰 → 跳过这回合；
- * - 掷了骰没选 → 自动选第一种推进方式，然后收手；
- * - 推进完没决定 → 收手（保住本回合进度）。
+ * 计时用的「这一步」标识：只在换人或换步骤时变。叫墩阶段整段一个 key（别人叫墩、撤回都不会重置倒计时）。
  */
-export function timeoutTurn(state: GameState): GameState {
-  if (state.phase === "finished") return state;
-  const playerId = currentPlayerId(state);
-  const stage = state.stage;
-  let current: GameState;
-  const events: GameEvent[] = [];
-  if (stage === "roll") {
-    current = structuredClone(state);
-    endTurn(current, events);
-    current.version += 1;
-    current.log = [...(state.log ?? []), { player: playerId, command: { type: "TIMEOUT" } }];
-  } else {
-    current = state;
-    if (stage === "choose") {
-      const step = runCommand(current, playerId, { type: "CHOOSE", sums: [...state.options[0]!.sums] });
-      events.push(...step.events);
-      current = step.state;
-    }
-    const step = runCommand(current, playerId, { type: "STOP" });
-    events.push(...step.events);
-    current = step.state;
+export function stepKey(state: GameState): string {
+  switch (state.phase) {
+    case "bid":
+      return `${state.round}:bid`;
+    case "play":
+      return `${state.round}:${state.trickNo}:${state.trick.length}`;
+    case "trickEnd":
+      return `${state.round}:${state.trickNo}:end`;
+    case "roundEnd":
+      return `${state.round}:end`;
+    case "finished":
+      return "finished";
   }
-  current.events = [{ type: "TurnTimedOut", player: playerId, stage }, ...events];
+}
+
+export function legalActions(state: GameState, playerId: string): GameCommand[] {
+  const player = state.players.find((candidate) => candidate.id === playerId);
+  if (!player) return [];
+  switch (state.phase) {
+    case "bid": {
+      const bids: GameCommand[] = Array.from({ length: state.handSize + 1 }, (_, n) => ({ type: "BID", n }));
+      return player.bidSubmitted ? [...bids, { type: "UNBID" }] : bids;
+    }
+    case "play":
+      if (state.turn !== playerId) return [];
+      return legalCards(state.hands[playerId] ?? [], state.trick).flatMap((card): GameCommand[] =>
+        cardInfo(card).kind === "tigress"
+          ? [{ type: "PLAY", card, as: "pirate" }, { type: "PLAY", card, as: "escape" }]
+          : [{ type: "PLAY", card }],
+      );
+    case "roundEnd":
+      return state.ready.includes(playerId) ? [] : [{ type: "CONTINUE" }];
+    default:
+      return [];
+  }
+}
+
+/**
+ * 「最不可能赢」的大概强度，越小越安全（超时默认出牌用）：
+ * 白旗 < 双面海盗当白旗 < 垫的普通花色 < 领出花色 < 黑旗 < 美人鱼 < 海盗 < 鬼船长。
+ */
+function danger(card: CardId, lead: ReturnType<typeof leadSuitOf>): number {
+  const info = cardInfo(card);
+  switch (info.kind) {
+    case "escape":
+      return 0;
+    case "tigress":
+      return 1;
+    case "mermaid":
+      return 80;
+    case "pirate":
+      return 90;
+    case "captain":
+      return 100;
+    case "number":
+      if (info.suit === TRUMP) return 50 + info.rank;
+      if (lead && lead !== "none" && info.suit === lead) return 30 + info.rank;
+      return 10 + info.rank;
+  }
+}
+
+/** 超时的默认出牌：合法牌里最不可能赢的一张，双面海盗当白旗。 */
+export function safestPlay(state: GameState, playerId: string): GameCommand {
+  const lead = leadSuitOf(state.trick);
+  const legal = legalCards(state.hands[playerId] ?? [], state.trick);
+  const card = [...legal].sort((left, right) => danger(left, lead) - danger(right, lead) || rankOf(left) - rankOf(right))[0]!;
+  return cardInfo(card).kind === "tigress" ? { type: "PLAY", card, as: "escape" } : { type: "PLAY", card };
+}
+
+/** 超时的默认叫墩：round(本轮手牌数 / 人数)。 */
+export function defaultBid(state: GameState): number {
+  return Math.round(state.handSize / state.players.length);
+}
+
+/**
+ * 这一步超时，没有人机时的默认处理（服务器优先让人机代打，见 apps/server）：
+ * 叫墩 → 没叫的人叫 defaultBid；出牌 → safestPlay；结算页 → 进下一轮；trickEnd → 下一墩。
+ */
+export function timeoutStep(state: GameState): GameState {
+  if (state.phase === "finished") return state;
+  const pending = pendingActors(state);
+  const phase = state.phase;
+  let current = state;
+  if (phase === "bid") {
+    for (const id of pending) current = applyCommand(current, id, { type: "BID", n: defaultBid(current) });
+  } else if (phase === "play") {
+    current = applyCommand(current, pending[0]!, safestPlay(current, pending[0]!));
+  } else {
+    current = advanceGame(current);
+  }
+  if (pending.length > 0 && phase !== "trickEnd") {
+    current = { ...current, events: [{ type: "TimedOut", players: pending, phase }, ...current.events] };
+  }
   return current;
 }
 
-/** 这个游戏没有隐藏信息，只去掉服务端才需要的种子、随机数状态和动作序列。 */
-export function redactGameForViewer(state: GameState, _viewerId: string): GameState {
+export interface RedactOptions {
+  /** 观战上帝视角：能看所有人的手牌和没亮的叫墩；牌堆、幽灵的牌、种子照样看不到。 */
+  readonly seeAll?: boolean;
+}
+
+/**
+ * 隐藏信息只经过这里下发：
+ * - 别人的手牌 → 空数组（张数在 handCounts）；
+ * - 幽灵的牌、没发的牌、种子、随机数状态、动作序列 → 谁都不给；
+ * - 叫墩亮出之前，别人的叫墩数 → null（只看 bidSubmitted）。
+ */
+export function redactGameForViewer(state: GameState, viewerId: string, options: RedactOptions = {}): GameState {
   const { seed: _seed, rngState: _rngState, log: _log, ...rest } = state;
-  return rest;
+  const view = structuredClone(rest) as GameState;
+  view.ghostQueue = [];
+  view.undealt = [];
+  if (!options.seeAll) {
+    for (const id of Object.keys(view.hands)) if (id !== viewerId) view.hands[id] = [];
+    if (view.phase === "bid") {
+      for (const player of view.players) if (player.id !== viewerId) player.bid = null;
+    }
+  }
+  return view;
 }
 
 export function createGame(
@@ -296,30 +451,45 @@ export function createGame(
     throw new Error(`需要 ${config.minPlayers}–${config.maxPlayers} 位玩家才能开始。`);
   }
   const rng = createRng(seed);
-  const startPlayer = rng.int(players.length);
+  const first = rng.int(players.length);
   const state: GameState = {
     config,
-    phase: "playing",
-    players: players.map((player, index) => ({
-      id: player.id,
-      name: player.name,
-      color: index,
-      score: 0,
-      progress: new Array<number>(MAX_HEIGHT).fill(0),
-    })),
-    currentPlayer: startPlayer,
-    turn: 1,
-    step: 0,
-    stage: "roll",
-    runners: [],
-    owners: {},
-    options: [],
-    rollsThisTurn: 0,
+    phase: "bid",
+    players: players.map((player, index) => ({ id: player.id, name: player.name, seat: index, score: 0, bid: null, bidSubmitted: false, won: 0 })),
+    round: 1,
+    handSize: 1,
+    firstPlayer: players[first]!.id,
+    hands: {},
+    handCounts: {},
+    ghostQueue: [],
+    undealt: [],
+    trickNo: 0,
+    leader: players[first]!.id,
+    trick: [],
+    turn: null,
+    tricks: [],
+    ready: [],
+    history: [],
     events: [],
     version: 0,
     seed,
   };
-  state.events = [{ type: "TurnStarted", player: currentPlayerId(state) }];
+  const events: GameEvent[] = [];
+  deal(state, rng, events);
+  state.events = events;
   state.rngState = rng.state;
   return state;
 }
+
+/** 庄家（本轮首位玩家的上家），界面显示用。 */
+export function dealerOf(state: Pick<GameState, "players" | "firstPlayer">): string {
+  const index = state.players.findIndex((player) => player.id === state.firstPlayer);
+  return state.players[(index - 1 + state.players.length) % state.players.length]!.id;
+}
+
+/** 本轮出过的牌（打完的墩 + 当前这墩），记牌辅助用。 */
+export function playedThisRound(state: Pick<GameState, "tricks" | "trick" | "phase">): PlayedCard[] {
+  return [...state.tricks.flatMap((trick) => trick.plays), ...(state.phase === "play" ? state.trick : [])];
+}
+
+

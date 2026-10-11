@@ -1,7 +1,7 @@
 import type { GameCommand, GameState } from "./types.js";
 
-/** 房间人数：2–4 人（规格书第 1 节）。 */
-export const CAPACITY_OPTIONS = [2, 3, 4] as const;
+/** 房间人数：2–8 人（2 人局自动加幽灵水手）。 */
+export const CAPACITY_OPTIONS = [2, 3, 4, 5, 6, 7, 8] as const;
 export type Capacity = (typeof CAPACITY_OPTIONS)[number];
 
 export interface LobbyMember {
@@ -29,6 +29,14 @@ export interface RoomAccess {
 
 export const DEFAULT_ROOM_ACCESS: RoomAccess = { allowSpectators: true, spectatorsSeeAll: false, open: false };
 
+/** 开房选项（房主在等待时可以改，下一局生效）。 */
+export interface RoomSettings {
+	/** 记牌辅助：桌边显示本轮出过的特殊牌、黑旗出到几。默认开。 */
+	readonly tracker: boolean;
+}
+
+export const DEFAULT_ROOM_SETTINGS: RoomSettings = { tracker: true };
+
 /** 观战的人：不占座位，不能操作、投票或进语音，可以聊天。 */
 export interface Spectator {
 	readonly id: string;
@@ -40,12 +48,13 @@ export interface LobbyRoomSnapshot {
 	readonly code: string;
 	readonly spectators: Spectator[];
 	readonly access: RoomAccess;
+	readonly settings: RoomSettings;
 	readonly capacity: Capacity;
 	readonly status: "waiting" | "playing";
 	readonly members: LobbyMember[];
 	readonly chat: RoomChatMessage[];
 	readonly game?: GameState;
-	/** 当前这一步剩余的毫秒数（发送时）；超时自动处理，见 timeoutTurn。 */
+	/** 当前这一步剩余的毫秒数（发送时）；超时自动处理（人机代打）。叫墩阶段是所有人共用的截止时间。 */
 	readonly turnRemainingMs?: number;
 	/** 整轮结束后的「是否继续」投票；remainingMs 为发送时剩余的毫秒数。 */
 	readonly rematch?: RematchState;
@@ -92,6 +101,7 @@ export interface SendRoomChatPayload {
 export interface CreateRoomPayload {
 	readonly name: string;
 	readonly capacity: Capacity;
+	readonly settings?: Partial<RoomSettings>;
 }
 
 /** 用房间码加入，或者从首页列表按房间的公开 id 加入；spectate 为 true 时进来观战。 */
@@ -135,6 +145,8 @@ export interface ClientToServerEvents {
 	"room:rematch": (accept: boolean, ack: RoomAck<void>) => void;
 	"room:kick": (memberId: string, ack: RoomAck<void>) => void;
 	"room:access": (access: Partial<RoomAccess>, ack: RoomAck<void>) => void;
+	/** 房主在等待时改开房选项。 */
+	"room:settings": (settings: Partial<RoomSettings>, ack: RoomAck<void>) => void;
 	/** 等待中：观战的人坐到空座位上 / 玩家（房主除外）改成观战。 */
 	"room:sit": (ack: RoomAck<void>) => void;
 	"room:stand": (ack: RoomAck<void>) => void;
